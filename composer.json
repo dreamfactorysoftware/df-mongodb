@@ -1,0 +1,60 @@
+{
+  "name": "dreamfactory/rave-mongodb",
+  "description": "The DreamFactory RAVE(tm) MongoDB Service.",
+  "keywords": [
+	"dreamfactory",
+    "dsp",
+	"rave",
+	"mongodb",
+	"nosql",
+	"database",
+	"db"
+  ],
+  "homepage": "https://www.dreamfactory.com/",
+  "license": "Apache-2.0",
+  "authors": [
+	{
+	  "name": "Arif Islam",
+	  "email": "arifislam@dreamfactory.com"
+	},
+	{
+	  "name": "Jerry Ablan",
+	  "email": "jerryablan@dreamfactory.com"
+	},
+	{
+	  "name": "Lee Hicks",
+	  "email": "leehicks@dreamfactory.com"
+	}
+  ],
+  "support": {
+	"email": "support@dreamfactory.com",
+	"issues": "https://github.com/dreamfactorysoftware/rave/issues",
+	"wiki": "https://github.com/dreamfactorysoftware/rave/wiki",
+	"source": "https://github.com/dreamfactorysoftware/rave"
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+	"require": {
+	    "dreamfactory/php-utils": "dev-develop as dev-master",
+	    "dreamfactory/rave-common": "dev-develop as dev-master",
+        "rhumsaa/array_column": "~1.1"
+	},
+	"autoload": {
+		"psr-4": {
+		  	"DreamFactory\\MongoDb\\": "workbench/DreamFactory/MongoDb/src/"
+		}
+	},
+	"scripts": {
+		"post-install-cmd": [
+		],
+		"post-update-cmd": [
+		],
+		"post-create-project-cmd": [
+		]
+	},
+	"extra": {
+	  "branch-alias": {
+		"dev-develop": "0.0.x-dev"
+	  }
+	}
+}
