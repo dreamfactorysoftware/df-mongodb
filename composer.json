@@ -41,7 +41,7 @@
 	},
 	"autoload": {
 		"psr-4": {
-		  	"DreamFactory\\MongoDb\\": "workbench/DreamFactory/MongoDb/src/"
+		  	"DreamFactory\\MongoDb\\": "src/"
 		}
 	},
 	"scripts": {
