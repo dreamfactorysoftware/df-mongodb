@@ -1,5 +1,5 @@
 <?php
-namespace DreamFactory\MongoDb\Database\Seeds;
+namespace DreamFactory\Rave\MongoDb\Database\Seeds;
 
 use Illuminate\Database\Seeder;
 use DreamFactory\Rave\Models\ServiceType;
@@ -17,8 +17,8 @@ class MongoDbSeeder extends Seeder
         ServiceType::create(
             [
                 'name'           => 'mongo_db',
-                'class_name'     => 'DreamFactory\\MongoDb\\Services\\MongoDbService',
-                'config_handler' => 'DreamFactory\\MongoDb\\Models\\MongoDbConfig',
+                'class_name'     => 'DreamFactory\\Rave\\MongoDb\\Services\\MongoDbService',
+                'config_handler' => 'DreamFactory\\Rave\\MongoDb\\Models\\MongoDbConfig',
                 'label'          => 'MongoDB',
                 'description'    => 'Database service for MongoDB connections.',
                 'group'          => 'Databases',

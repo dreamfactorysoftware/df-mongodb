@@ -18,7 +18,7 @@
  * limitations under the License.
  */
 
-namespace DreamFactory\MongoDb\Services;
+namespace DreamFactory\Rave\MongoDb\Services;
 
 use DreamFactory\Library\Utility\ArrayUtils;
 use DreamFactory\Rave\Exceptions\BadRequestException;
@@ -27,8 +27,8 @@ use DreamFactory\Rave\Exceptions\NotFoundException;
 use DreamFactory\Rave\Contracts\ServiceResponseInterface;
 use DreamFactory\Rave\Services\BaseNoSqlDbService;
 use DreamFactory\Rave\Resources\BaseRestResource;
-use DreamFactory\MongoDb\Resources\Schema;
-use DreamFactory\MongoDb\Resources\Table;
+use DreamFactory\Rave\MongoDb\Resources\Schema;
+use DreamFactory\Rave\MongoDb\Resources\Table;
 
 /**
  * MongoDbService
@@ -66,12 +66,12 @@ class MongoDbService extends BaseNoSqlDbService
     protected $resources = [
         Schema::RESOURCE_NAME          => [
             'name'       => Schema::RESOURCE_NAME,
-            'class_name' => 'DreamFactory\\MongoDb\\Resources\\Schema',
+            'class_name' => 'DreamFactory\\Rave\\MongoDb\\Resources\\Schema',
             'label'      => 'Schema',
         ],
         Table::RESOURCE_NAME           => [
             'name'       => Table::RESOURCE_NAME,
-            'class_name' => 'DreamFactory\\MongoDb\\Resources\\Table',
+            'class_name' => 'DreamFactory\\Rave\\MongoDb\\Resources\\Table',
             'label'      => 'Table',
         ],
     ];
@@ -273,7 +273,7 @@ class MongoDbService extends BaseNoSqlDbService
             // If version 1.x, the resource could be a table
 //            if ($this->request->getApiVersion())
 //            {
-//                $resource = $this->instantiateResource( 'DreamFactory\\MongoDb\\Resources\\Table', [ 'name' => $this->resource ] );
+//                $resource = $this->instantiateResource( 'DreamFactory\\Rave\\MongoDb\\Resources\\Table', [ 'name' => $this->resource ] );
 //                $newPath = $this->resourceArray;
 //                array_shift( $newPath );
 //                $newPath = implode( '/', $newPath );

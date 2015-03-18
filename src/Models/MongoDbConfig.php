@@ -18,7 +18,7 @@
  * limitations under the License.
  */
 
-namespace DreamFactory\MongoDb\Models;
+namespace DreamFactory\Rave\MongoDb\Models;
 
 use DreamFactory\Library\Utility\ArrayUtils;
 use DreamFactory\Rave\Exceptions\BadRequestException;

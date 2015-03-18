@@ -37,7 +37,7 @@ class MongoDbServiceTest extends \DreamFactory\Rave\Testing\DbServiceTestCase
         {
             // adds the migration and calls the seeder to add service type
             Artisan::call( 'migrate', [ '--path' => 'workbench/DreamFactory/MongoDb/database/migrations' ] );
-            Artisan::call( 'db:seed', [ '--class' => 'DreamFactory\\MongoDb\\Database\\Seeds\\MongoDbSeeder' ] );
+            Artisan::call( 'db:seed', [ '--class' => 'DreamFactory\\Rave\\MongoDb\\Database\\Seeds\\MongoDbSeeder' ] );
 
             Service::create(
                 [

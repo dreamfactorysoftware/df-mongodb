@@ -18,7 +18,7 @@
  * limitations under the License.
  */
 
-namespace DreamFactory\MongoDb\Resources;
+namespace DreamFactory\Rave\MongoDb\Resources;
 
 use DreamFactory\Library\Utility\ArrayUtils;
 use DreamFactory\Library\Utility\Enums\Verbs;
@@ -29,7 +29,7 @@ use DreamFactory\Rave\Exceptions\NotFoundException;
 use DreamFactory\Rave\Exceptions\RestException;
 use DreamFactory\Rave\Resources\BaseDbTableResource;
 use DreamFactory\Rave\Utility\DbUtilities;
-use DreamFactory\MongoDb\Services\MongoDbService;
+use DreamFactory\Rave\MongoDb\Services\MongoDbService;
 
 class Table extends BaseDbTableResource
 {

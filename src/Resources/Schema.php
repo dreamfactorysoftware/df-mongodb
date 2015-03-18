@@ -18,7 +18,7 @@
  * limitations under the License.
  */
 
-namespace DreamFactory\MongoDb\Resources;
+namespace DreamFactory\Rave\MongoDb\Resources;
 
 use DreamFactory\Library\Utility\ArrayUtils;
 use DreamFactory\Library\Utility\Inflector;
@@ -26,7 +26,7 @@ use DreamFactory\Rave\Exceptions\BadRequestException;
 use DreamFactory\Rave\Exceptions\InternalServerErrorException;
 use DreamFactory\Rave\Resources\BaseNoSqlDbSchemaResource;
 use DreamFactory\Rave\Utility\DbUtilities;
-use DreamFactory\MongoDb\Services\MongoDbService;
+use DreamFactory\Rave\MongoDb\Services\MongoDbService;
 
 class Schema extends BaseNoSqlDbSchemaResource
 {
