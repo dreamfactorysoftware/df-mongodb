@@ -19,9 +19,9 @@
  */
 
 use DreamFactory\Library\Utility\Enums\Verbs;
-use Rave\Models\Service;
+use DreamFactory\Rave\Models\Service;
 
-class MongoDbServiceTest extends \Rave\Testing\DbServiceTestCase
+class MongoDbServiceTest extends \DreamFactory\Rave\Testing\DbServiceTestCase
 {
     const SERVICE_NAME = 'mongo';
 

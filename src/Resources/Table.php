@@ -23,12 +23,12 @@ namespace DreamFactory\MongoDb\Resources;
 use DreamFactory\Library\Utility\ArrayUtils;
 use DreamFactory\Library\Utility\Enums\Verbs;
 use DreamFactory\Library\Utility\Inflector;
-use DreamFactory\Rave\Common\Exceptions\BadRequestException;
-use DreamFactory\Rave\Common\Exceptions\InternalServerErrorException;
-use DreamFactory\Rave\Common\Exceptions\NotFoundException;
-use DreamFactory\Rave\Common\Exceptions\RestException;
-use Rave\Resources\BaseDbTableResource;
-use Rave\Utility\DbUtilities;
+use DreamFactory\Rave\Exceptions\BadRequestException;
+use DreamFactory\Rave\Exceptions\InternalServerErrorException;
+use DreamFactory\Rave\Exceptions\NotFoundException;
+use DreamFactory\Rave\Exceptions\RestException;
+use DreamFactory\Rave\Resources\BaseDbTableResource;
+use DreamFactory\Rave\Utility\DbUtilities;
 use DreamFactory\MongoDb\Services\MongoDbService;
 
 class Table extends BaseDbTableResource

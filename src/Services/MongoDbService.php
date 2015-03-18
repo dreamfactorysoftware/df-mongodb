@@ -21,12 +21,12 @@
 namespace DreamFactory\MongoDb\Services;
 
 use DreamFactory\Library\Utility\ArrayUtils;
-use DreamFactory\Rave\Common\Exceptions\BadRequestException;
-use DreamFactory\Rave\Common\Exceptions\InternalServerErrorException;
-use DreamFactory\Rave\Common\Exceptions\NotFoundException;
-use Rave\Contracts\ServiceResponseInterface;
-use Rave\Services\BaseNoSqlDbService;
-use Rave\Resources\BaseRestResource;
+use DreamFactory\Rave\Exceptions\BadRequestException;
+use DreamFactory\Rave\Exceptions\InternalServerErrorException;
+use DreamFactory\Rave\Exceptions\NotFoundException;
+use DreamFactory\Rave\Contracts\ServiceResponseInterface;
+use DreamFactory\Rave\Services\BaseNoSqlDbService;
+use DreamFactory\Rave\Resources\BaseRestResource;
 use DreamFactory\MongoDb\Resources\Schema;
 use DreamFactory\MongoDb\Resources\Table;
 
