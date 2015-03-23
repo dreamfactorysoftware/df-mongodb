@@ -35,9 +35,7 @@
   "minimum-stability": "dev",
   "prefer-stable": true,
 	"require": {
-	    "dreamfactory/php-utils": "dev-develop as dev-master",
-	    "dreamfactory/rave": "dev-develop as dev-master",
-        "rhumsaa/array_column": "~1.1"
+	    "dreamfactory/rave": "dev-develop as dev-master"
 	},
 	"autoload": {
 		"psr-4": {

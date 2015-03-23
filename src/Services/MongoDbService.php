@@ -105,6 +105,10 @@ class MongoDbService extends BaseNoSqlDbService
         }
 
         $options = ArrayUtils::get( $config, 'options', array() );
+        if(empty($options))
+        {
+            $options = array();
+        }
         $user = ArrayUtils::get( $config, 'username' );
         $password = ArrayUtils::get( $config, 'password' );
 
