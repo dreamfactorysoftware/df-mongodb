@@ -20,7 +20,7 @@
 
 use DreamFactory\Library\Utility\Enums\Verbs;
 use DreamFactory\Rave\Enums\ContentTypes;
-use DreamFactory\Rave\MongoDb\Services\MongoDbService;
+use DreamFactory\Rave\MongoDb\Services\MongoDb;
 use DreamFactory\Rave\MongoDb\Resources\Schema;
 use DreamFactory\Rave\MongoDb\Resources\Table;
 use DreamFactory\Rave\Testing\TestServiceRequest;
@@ -50,7 +50,7 @@ class MongoDbServiceTest extends \DreamFactory\Rave\Testing\DbServiceTestCase
         parent::setup();
 
         $options = ['username' => env( 'MONGODB_USER' ), 'password' => env( 'MONGODB_PASSWORD' ), 'db' => env( 'MONGODB_DB')];
-        $this->service = new MongoDbService(
+        $this->service = new MongoDb(
             [
                 'name'        => static::SERVICE_NAME,
                 'label'       => 'MongoDB Database',

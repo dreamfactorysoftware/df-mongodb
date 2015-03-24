@@ -29,7 +29,7 @@ use DreamFactory\Rave\Exceptions\NotFoundException;
 use DreamFactory\Rave\Exceptions\RestException;
 use DreamFactory\Rave\Resources\BaseDbTableResource;
 use DreamFactory\Rave\Utility\DbUtilities;
-use DreamFactory\Rave\MongoDb\Services\MongoDbService;
+use DreamFactory\Rave\MongoDb\Services\MongoDb;
 
 class Table extends BaseDbTableResource
 {

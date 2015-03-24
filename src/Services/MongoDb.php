@@ -31,12 +31,12 @@ use DreamFactory\Rave\MongoDb\Resources\Schema;
 use DreamFactory\Rave\MongoDb\Resources\Table;
 
 /**
- * MongoDbService
+ * MongoDb
  *
  * A service to handle MongoDB NoSQL (schema-less) database
  * services accessed through the REST API.
  */
-class MongoDbService extends BaseNoSqlDbService
+class MongoDb extends BaseNoSqlDbService
 {
     //*************************************************************************
     //	Constants

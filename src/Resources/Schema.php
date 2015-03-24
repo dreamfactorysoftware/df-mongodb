@@ -26,7 +26,7 @@ use DreamFactory\Rave\Exceptions\BadRequestException;
 use DreamFactory\Rave\Exceptions\InternalServerErrorException;
 use DreamFactory\Rave\Resources\BaseNoSqlDbSchemaResource;
 use DreamFactory\Rave\Utility\DbUtilities;
-use DreamFactory\Rave\MongoDb\Services\MongoDbService;
+use DreamFactory\Rave\MongoDb\Services\MongoDb;
 
 class Schema extends BaseNoSqlDbSchemaResource
 {

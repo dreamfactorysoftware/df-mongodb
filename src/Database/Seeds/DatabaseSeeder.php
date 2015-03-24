@@ -17,7 +17,7 @@ class DatabaseSeeder extends Seeder
         ServiceType::create(
             [
                 'name'           => 'mongo_db',
-                'class_name'     => 'DreamFactory\\Rave\\MongoDb\\Services\\MongoDbService',
+                'class_name'     => 'DreamFactory\\Rave\\MongoDb\\Services\\MongoDb',
                 'config_handler' => 'DreamFactory\\Rave\\MongoDb\\Models\\MongoDbConfig',
                 'label'          => 'MongoDB',
                 'description'    => 'Database service for MongoDB connections.',
