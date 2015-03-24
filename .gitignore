@@ -1,11 +1,6 @@
-/bootstrap/compiled.php
-/vendor
-/.idea
-/log
-/public/test_report
-/workbench/repos
-composer.phar
-_ide_helper.php
+vendor
+.idea
+log
 .env.*.php
 .env.php
 .env

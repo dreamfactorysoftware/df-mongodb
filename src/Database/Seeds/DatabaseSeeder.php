@@ -4,7 +4,7 @@ namespace DreamFactory\Rave\MongoDb\Database\Seeds;
 use Illuminate\Database\Seeder;
 use DreamFactory\Rave\Models\ServiceType;
 
-class MongoDbSeeder extends Seeder
+class DatabaseSeeder extends Seeder
 {
     /**
      * Run the database seeds.

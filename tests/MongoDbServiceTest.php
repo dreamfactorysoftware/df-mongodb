@@ -19,46 +19,51 @@
  */
 
 use DreamFactory\Library\Utility\Enums\Verbs;
-use DreamFactory\Rave\Models\Service;
+use DreamFactory\Rave\Enums\ContentTypes;
+use DreamFactory\Rave\MongoDb\Services\MongoDbService;
+use DreamFactory\Rave\MongoDb\Resources\Schema;
+use DreamFactory\Rave\MongoDb\Resources\Table;
+use DreamFactory\Rave\Testing\TestServiceRequest;
 
 class MongoDbServiceTest extends \DreamFactory\Rave\Testing\DbServiceTestCase
 {
+    /**
+     * @const string
+     */
     const SERVICE_NAME = 'mongo';
+    /**
+     * @const string
+     */
+    const TABLE_NAME = 'todo';
+    /**
+     * @const string
+     */
+    const TABLE_ID = Table::DEFAULT_ID_FIELD;
 
-    protected static $do_teardown = false;
+    /**
+     * @var MongoDbService
+     */
+    protected $service = null;
 
-    protected static $staged = false;
-
-    public function stage()
+    public function setup()
     {
-        parent::stage();
+        parent::setup();
 
-        if ( !Service::whereName( static::SERVICE_NAME )->exists() )
-        {
-            // adds the migration and calls the seeder to add service type
-            Artisan::call( 'migrate', [ '--path' => 'workbench/DreamFactory/MongoDb/database/migrations' ] );
-            Artisan::call( 'db:seed', [ '--class' => 'DreamFactory\\Rave\\MongoDb\\Database\\Seeds\\MongoDbSeeder' ] );
-
-            Service::create(
-                [
-                    'name'        => static::SERVICE_NAME,
-                    'label'       => 'MongoDB Database',
-                    'description' => 'MongoDB database for testing',
-                    'is_active'   => 1,
-                    'type'        => 'mongo_db',
-                    'config'      => [ 'dsn' => env( 'MONGODB_DSN' ), 'username' => env( 'MONGODB_USER' ), 'password' => env( 'MONGODB_PASSWORD' ) ]
-                ]
-            );
-        }
+        $options = ['username' => env( 'MONGODB_USER' ), 'password' => env( 'MONGODB_PASSWORD' ), 'db' => env( 'MONGODB_DB')];
+        $this->service = new MongoDbService(
+            [
+                'name'        => static::SERVICE_NAME,
+                'label'       => 'MongoDB Database',
+                'description' => 'MongoDB database for testing',
+                'is_active'   => 1,
+                'type'        => 'mongo_db',
+                'config'      => [ 'dsn' => env( 'MONGODB_DSN' ), 'options' => $options ]
+            ]
+        );
     }
 
     public function tearDown()
     {
-        if ( static::$do_teardown )
-        {
-            Service::whereType( 'mongo_db' )->delete();
-        }
-
         parent::tearDown();
     }
 
@@ -73,60 +78,40 @@ class MongoDbServiceTest extends \DreamFactory\Rave\Testing\DbServiceTestCase
 
     public function testDefaultResources()
     {
-        $rs = $this->call( Verbs::GET, $this->buildPath() );
-        $data = json_decode( $rs->getContent(), true );
+        $request = new TestServiceRequest();
+        $rs = $this->service->handleRequest($request);
+        $data = $rs->getContent();
         $this->assertArrayHasKey( 'resource', $data );
-        $this->assertCount( 4, $data['resource'] );
+        $this->assertCount( 2, $data['resource'] );
 //        $this->assert( '_schema', $data['resource'] );
 //        $this->assertCount( 3, $data['resource'] );
-//        $this->assertArrayHasKey( '_proc', $data['resource'] );
-//        $this->assertCount( 3, $data['resource'] );
-//        $this->assertArrayHasKey( '_func', $data['resource'] );
+//        $this->assertArrayHasKey( '_table', $data['resource'] );
 //        $this->assertCount( 3, $data['resource'] );
     }
 
     public function testSchemaEmpty()
     {
-        $rs = $this->call( Verbs::GET, $this->buildPath( '_schema' ) );
-        $data = json_decode( $rs->getContent(), true );
+        $request = new TestServiceRequest();
+        $rs = $this->service->handleRequest($request, Schema::RESOURCE_NAME);
+        $data = $rs->getContent();
         $this->assertArrayHasKey( 'resource', $data );
         $this->assertEmpty( $data['resource'] );
     }
 
     public function testCreateTable()
     {
-        $payload = '{
-	"field": [
-		{
-			"name": "id",
-			"type": "id"
-		},
-		{
-			"name": "name",
-			"type": "string",
-			"is_unique": true,
-			"allow_null": false
-		},
-		{
-			"name": "complete",
-			"type": "boolean",
-			"allow_null": true
-		}
-	]
-}';
-
-        Schema::dropIfExists( 'todo' );
-
-        $rs = $this->callWithPayload( Verbs::POST, $this->buildPath( '_schema/todo' ), $payload );
-        $data = json_decode( $rs->getContent(), true );
+        $request = new TestServiceRequest(Verbs::POST);
+        $rs = $this->service->handleRequest($request, Schema::RESOURCE_NAME . '/' . static::TABLE_NAME);
+        $data = $rs->getContent();
         $this->assertArrayHasKey( 'name', $data );
-        $this->assertSame( 'todo', $data['name'] );
+        $this->assertSame( static::TABLE_NAME, $data['name'] );
     }
 
     public function testGetRecordsEmpty()
     {
-        $rs = $this->call( Verbs::GET, $this->buildPath( '_table/todo' ) );
-        $data = json_decode( $rs->getContent(), true );
+        $request = new TestServiceRequest();
+        $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
+        $data = $rs->getContent();
         $this->assertArrayHasKey( 'record', $data );
         $this->assertEmpty( $data['record'] );
     }
@@ -136,56 +121,59 @@ class MongoDbServiceTest extends \DreamFactory\Rave\Testing\DbServiceTestCase
         $payload = '{
 	"record": [
 		{
+		    "_id": 1,
 			"name": "test1",
 			"complete": false
 		},
 		{
+		    "_id": 2,
 			"name": "test2",
 			"complete": true
 		},
 		{
+		    "_id": 3,
 			"name": "test3"
 		}
 	]
 }';
-        $rs = $this->callWithPayload( Verbs::POST, $this->buildPath( '_table/todo' ), $payload );
-        $data = json_decode( $rs->getContent(), true );
+        $request = new TestServiceRequest(Verbs::POST);
+        $request->setContent($payload, ContentTypes::JSON);
+        $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
+        $data = $rs->getContent();
         $this->assertArrayHasKey( 'record', $data );
         $this->assertCount( 3, $data['record'] );
-//        $this->assertResponseStatus( 201 );
     }
 
     public function testGetRecordById()
     {
-        $rs = $this->call( Verbs::GET, $this->buildPath( '_table/todo/1' ) );
-        $data = json_decode( $rs->getContent(), true );
-        $this->assertTrue( $data['id'] == 1 );
+        $request = new TestServiceRequest();
+        $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME . '/1');
+        $data = $rs->getContent();
+        $this->assertTrue( $data[Table::DEFAULT_ID_FIELD] == 1 );
     }
 
     public function testGetRecordsByIds()
     {
-        $rs = $this->call( Verbs::GET, $this->buildPath( '_table/todo?ids=1,2,3' ) );
-        $data = json_decode( $rs->getContent(), true );
-        $ids = implode( ",", array_column( $data['record'], 'id' ) );
+        $request = new TestServiceRequest(Verbs::GET, ['ids' => '1,2,3']);
+        $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
+        $data = $rs->getContent();
+        $ids = implode( ",", array_column( $data['record'], Table::DEFAULT_ID_FIELD ) );
         $this->assertTrue( $ids == "1,2,3" );
-    }
-
-    public function testGetRecordsOverTunnel()
-    {
-        $payload = '{"ids":[1,2]}';
-
-        $rs = $this->call( Verbs::POST, $this->buildPath( '_table/todo' ), [ ], [ ], [ ], [ "HTTP_X_HTTP_METHOD" => Verbs::GET ], $payload );
-
-        $data = json_decode( $rs->getContent(), true );
-        $ids = implode( ",", array_column( $data['record'], 'id' ) );
-        print_r( $ids );
-        $this->assertTrue( $ids == "1,2" );
     }
 
     public function testResourceNotFound()
     {
-        $this->call( Verbs::GET, $this->buildPath( '_table/todo/5' ) );
-        $this->assertResponseStatus( 404 );
+        $request = new TestServiceRequest(Verbs::GET);
+        try
+        {
+            $rs = $this->service->handleRequest( $request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME . '/5' );
+            $this->assertTrue(false);
+        }
+        catch (\Exception $ex)
+        {
+            $this->assertInstanceOf('\DreamFactory\Rave\Common\Exceptions\RestException', $ex);
+            $this->assertEquals( 404, $ex->getCode());
+        }
     }
 
     /************************************************
@@ -195,10 +183,10 @@ class MongoDbServiceTest extends \DreamFactory\Rave\Testing\DbServiceTestCase
     public function testCreateRecord()
     {
         $payload = '{"record":[{"name":"test4","complete":false}]}';
-
-        $rs = $this->callWithPayload( Verbs::POST, $this->buildPath( '_table/todo' ), $payload );
-//        $this->assertResponseStatus( 201 );
-        $data = json_decode( $rs->getContent(), true );
+        $request = new TestServiceRequest(Verbs::POST);
+        $request->setContent($payload, ContentTypes::JSON);
+        $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
+        $data = $rs->getContent();
         $this->assertArrayHasKey( 'record', $data );
         $this->assertCount( 1, $data['record'] );
     }
@@ -216,7 +204,9 @@ class MongoDbServiceTest extends \DreamFactory\Rave\Testing\DbServiceTestCase
 		}
 	]';
 
-        $rs = $this->callWithPayload( Verbs::POST, $this->buildPath( '_table/todo' ), $payload );
+        $request = new TestServiceRequest(Verbs::POST);
+        $request->setContent($payload, ContentTypes::JSON);
+        $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
         $this->assertTrue( $rs->getContent() == '{"record":[{"id":5},{"id":6}]}' );
     }
 
@@ -224,9 +214,10 @@ class MongoDbServiceTest extends \DreamFactory\Rave\Testing\DbServiceTestCase
     {
         $payload = '{"record":[{"name":"test7","complete":true}]}';
 
-        $rs = $this->callWithPayload( Verbs::POST, $this->buildPath( '_table/todo?fields=name,complete' ), $payload );
-//        $this->assertResponseStatus( 201 );
-        $data = json_decode( $rs->getContent(), true );
+        $request = new TestServiceRequest(Verbs::POST, [ 'fields' => 'name,complete']);
+        $request->setContent($payload, ContentTypes::JSON);
+        $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
+        $data = $rs->getContent();
         $this->assertArrayHasKey( 'record', $data );
         $this->assertCount( 1, $data['record'] );
         $this->assertArrayHasKey( 'name', $data['record'][0] );
@@ -252,11 +243,11 @@ class MongoDbServiceTest extends \DreamFactory\Rave\Testing\DbServiceTestCase
 	]
 }';
 
-        $rs = $this->callWithPayload( Verbs::POST, $this->buildPath( '_table/todo?continue=true' ), $payload );
-        print_r( $rs );
+        $request = new TestServiceRequest(Verbs::POST, ['continue' => true]);
+        $request->setContent($payload, ContentTypes::JSON);
+        $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
         $this->assertContains( '{"error":{"context":{"error":[1],"record":[{"id":8},"SQLSTATE[23000]: ', $rs->getContent() );
         $this->assertContains( "Duplicate entry 'test5'", $rs->getContent() );
-        $this->assertResponseStatus( 400 );
     }
 
     public function testCreateRecordsWithRollback()
@@ -277,13 +268,14 @@ class MongoDbServiceTest extends \DreamFactory\Rave\Testing\DbServiceTestCase
 	]
 }';
 
-        $rs = $this->callWithPayload( Verbs::POST, $this->buildPath( '_table/todo?rollback=true' ), $payload );
+        $request = new TestServiceRequest(Verbs::POST, ['rollback' => true]);
+        $request->setContent($payload, ContentTypes::JSON);
+        $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
 
         $this->assertContains(
             '{"error":{"context":{"error":[1],"record":[{"id":11},"SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry \'test5\'',
             $rs->getContent()
         );
-        $this->assertResponseStatus( 500 );
     }
 
     public function testCreateRecordBadRequest()
@@ -293,8 +285,9 @@ class MongoDbServiceTest extends \DreamFactory\Rave\Testing\DbServiceTestCase
                         "complete":true
                     }]}';
 
-        $this->callWithPayload( Verbs::POST, $this->buildPath( '_table/todo' ), $payload );
-        $this->assertResponseStatus( 500 );
+        $request = new TestServiceRequest(Verbs::POST);
+        $request->setContent($payload, ContentTypes::JSON);
+        $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
     }
 
     public function testCreateRecordFailNotNullField()
@@ -304,9 +297,9 @@ class MongoDbServiceTest extends \DreamFactory\Rave\Testing\DbServiceTestCase
                         "complete":true
                     }]}';
 
-        $rs = $this->callWithPayload( Verbs::POST, $this->buildPath( '_table/todo' ), $payload );
-
-        $this->assertResponseStatus( 400 );
+        $request = new TestServiceRequest(Verbs::POST);
+        $request->setContent($payload, ContentTypes::JSON);
+        $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
         $this->assertContains( '{"error":{"context":null,"message":"Field \'name\' can not be NULL.","code":400}}', $rs->getContent() );
     }
 
@@ -316,9 +309,9 @@ class MongoDbServiceTest extends \DreamFactory\Rave\Testing\DbServiceTestCase
                         "complete":true
                     }]}';
 
-        $rs = $this->callWithPayload( Verbs::POST, $this->buildPath( '_table/todo' ), $payload );
-
-        $this->assertResponseStatus( 400 );
+        $request = new TestServiceRequest(Verbs::POST);
+        $request->setContent($payload, ContentTypes::JSON);
+        $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
         $this->assertContains( '{"error":{"context":null,"message":"Required field \'name\' can not be NULL.","code":400}}', $rs->getContent() );
     }
 
@@ -540,25 +533,25 @@ class MongoDbServiceTest extends \DreamFactory\Rave\Testing\DbServiceTestCase
 
     public function testDeleteRecordById()
     {
-        $rs = $this->call( Verbs::DELETE, $this->buildPath( '_table/todo/1' ) );
-        $this->assertResponseOk();
+        $request = new TestServiceRequest(Verbs::DELETE);
+        $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME . '/1');
 //        $this->assertEquals( '{"id":1}', $rs->getContent() );
 
-        $this->call( Verbs::GET, $this->buildPath( '_table/todo/1' ) );
-        $this->assertResponseStatus( 404 );
+        $request->setMethod(Verbs::GET);
+        $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME . '/1');
+//        $this->assertEquals( '{"id":1}', $rs->getContent() );
     }
 
     public function testDeleteRecordByIds()
     {
-        $rs = $this->call( Verbs::DELETE, $this->buildPath( '_table/todo?ids=2,3' ) );
-        $this->assertResponseOk();
+        $request = new TestServiceRequest(Verbs::DELETE, ['ids' => '2,3']);
+        $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME . '/1');
 //        $this->assertEquals( '{"record":[{"id":2},{"id":3}]}', $rs->getContent() );
 
-        $this->call( Verbs::GET, $this->buildPath( '_table/todo/2' ) );
-        $this->assertResponseStatus( 404 );
+        $request->setMethod(Verbs::GET);
+        $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME . '/2');
 
-        $rs = $this->call( Verbs::GET, $this->buildPath( '_table/todo/3' ) );
-        $this->assertResponseStatus( 404 );
+        $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME . '/3');
     }
 
 //    public function testDELETERecordBulk()
@@ -595,10 +588,10 @@ class MongoDbServiceTest extends \DreamFactory\Rave\Testing\DbServiceTestCase
 //
     public function testDropTable()
     {
-        $rs = $this->call( Verbs::DELETE, $this->buildPath( '_schema/todo' ) );
-        $this->assertResponseOk();
+        $request = new TestServiceRequest(Verbs::DELETE);
+        $rs = $this->service->handleRequest($request, Schema::RESOURCE_NAME . '/' . static::TABLE_NAME);
 
-        $this->call( Verbs::GET, $this->buildPath( '_schema/todo' ) );
-        $this->assertResponseStatus( 404 );
+        $request->setMethod(Verbs::GET);
+        $rs = $this->service->handleRequest($request, Schema::RESOURCE_NAME . '/' . static::TABLE_NAME);
     }
 }
