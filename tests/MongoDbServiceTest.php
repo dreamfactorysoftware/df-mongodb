@@ -25,7 +25,7 @@ use DreamFactory\Rave\MongoDb\Resources\Schema;
 use DreamFactory\Rave\MongoDb\Resources\Table;
 use DreamFactory\Rave\Testing\TestServiceRequest;
 
-class MongoDbServiceTest extends \DreamFactory\Rave\Testing\DbServiceTestCase
+class MongoDbTest extends \DreamFactory\Rave\Testing\DbServiceTestCase
 {
     /**
      * @const string
@@ -41,7 +41,7 @@ class MongoDbServiceTest extends \DreamFactory\Rave\Testing\DbServiceTestCase
     const TABLE_ID = Table::DEFAULT_ID_FIELD;
 
     /**
-     * @var MongoDbService
+     * @var MongoDb
      */
     protected $service = null;
 
