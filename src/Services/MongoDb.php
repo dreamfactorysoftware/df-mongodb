@@ -266,11 +266,11 @@ class MongoDb extends BaseNoSqlDbService
     /**
      * {@InheritDoc}
      */
-    protected function handleResource()
+    protected function handleResource( array $resources )
     {
         try
         {
-            return parent::handleResource();
+            return parent::handleResource( $resources );
         }
         catch ( NotFoundException $_ex )
         {
@@ -304,7 +304,7 @@ class MongoDb extends BaseNoSqlDbService
      */
     public function listResources( $include_properties = null )
     {
-        if ( !$this->request->queryBool( 'as_access_components' ) )
+        if ( !$this->request->getParameterAsBool( 'as_access_components' ) )
         {
             return parent::listResources( $include_properties );
         }
