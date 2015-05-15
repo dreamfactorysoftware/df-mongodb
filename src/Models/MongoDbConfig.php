@@ -22,8 +22,7 @@ namespace DreamFactory\Rave\MongoDb\Models;
 
 use DreamFactory\Library\Utility\ArrayUtils;
 use DreamFactory\Rave\Exceptions\BadRequestException;
-use DreamFactory\Rave\Contracts\ServiceConfigHandlerInterface;
-use DreamFactory\Rave\Models\BaseModel;
+use DreamFactory\Rave\Models\BaseServiceConfigModel;
 use Illuminate\Database\Query\Builder;
 
 /**
@@ -36,24 +35,11 @@ use Illuminate\Database\Query\Builder;
  *
  * @method static Builder|MongoDbConfig whereServiceId( $value )
  */
-class MongoDbConfig extends BaseModel implements ServiceConfigHandlerInterface
+class MongoDbConfig extends BaseServiceConfigModel
 {
     protected $table = 'mongo_db_config';
 
-    protected $primaryKey = 'service_id';
-
     protected $fillable = [ 'service_id', 'dsn', 'options', 'driver_options' ];
-
-    public $timestamps = false;
-
-    public $incrementing = false;
-
-    public static function getConfig( $id )
-    {
-        $model = static::find( $id );
-
-        return ( !empty( $model ) ) ? $model->toArray() : [ ];
-    }
 
     public static function validateConfig( $config )
     {
@@ -67,29 +53,4 @@ class MongoDbConfig extends BaseModel implements ServiceConfigHandlerInterface
 
         return true;
     }
-
-    public static function setConfig( $id, $config )
-    {
-        $model = static::find( $id );
-        if ( !empty( $model ) )
-        {
-            $model->update( $config );
-        }
-        else
-        {
-            $config['service_id'] = $id;
-            static::create( $config );
-        }
-    }
-
-    public static function removeConfig( $id )
-    {
-        // deleting is not necessary here due to cascading on_delete relationship in database
-    }
-
-    public static function getAvailableConfigs()
-    {
-        return null;
-    }
-
 }
