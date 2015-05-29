@@ -21,6 +21,7 @@
 namespace DreamFactory\Rave\MongoDb\Models;
 
 use DreamFactory\Library\Utility\ArrayUtils;
+use DreamFactory\Rave\Components\RequireExtensions;
 use DreamFactory\Rave\Exceptions\BadRequestException;
 use DreamFactory\Rave\Models\BaseServiceConfigModel;
 use Illuminate\Database\Query\Builder;
@@ -37,12 +38,16 @@ use Illuminate\Database\Query\Builder;
  */
 class MongoDbConfig extends BaseServiceConfigModel
 {
+    use RequireExtensions;
+
     protected $table = 'mongo_db_config';
 
     protected $fillable = [ 'service_id', 'dsn', 'options', 'driver_options' ];
 
     public static function validateConfig( $config )
     {
+        static::checkExtensions( [ 'mongo' ] );
+
         if ( ( null === ArrayUtils::get( $config, 'dsn', null, true ) ) )
         {
             if ( ( null === ArrayUtils::getDeep( $config, 'options', 'db', null, true ) ) )

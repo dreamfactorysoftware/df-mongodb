@@ -21,6 +21,7 @@
 namespace DreamFactory\Rave\MongoDb\Services;
 
 use DreamFactory\Library\Utility\ArrayUtils;
+use DreamFactory\Rave\Components\RequireExtensions;
 use DreamFactory\Rave\Exceptions\BadRequestException;
 use DreamFactory\Rave\Exceptions\InternalServerErrorException;
 use DreamFactory\Rave\Exceptions\NotFoundException;
@@ -38,6 +39,12 @@ use DreamFactory\Rave\MongoDb\Resources\Table;
  */
 class MongoDb extends BaseNoSqlDbService
 {
+    //*************************************************************************
+    //	Traits
+    //*************************************************************************
+
+    use RequireExtensions;
+
     //*************************************************************************
     //	Constants
     //*************************************************************************
@@ -64,12 +71,12 @@ class MongoDb extends BaseNoSqlDbService
      * @var array
      */
     protected $resources = [
-        Schema::RESOURCE_NAME          => [
+        Schema::RESOURCE_NAME => [
             'name'       => Schema::RESOURCE_NAME,
             'class_name' => 'DreamFactory\\Rave\\MongoDb\\Resources\\Schema',
             'label'      => 'Schema',
         ],
-        Table::RESOURCE_NAME           => [
+        Table::RESOURCE_NAME  => [
             'name'       => Table::RESOURCE_NAME,
             'class_name' => 'DreamFactory\\Rave\\MongoDb\\Resources\\Table',
             'label'      => 'Table',
@@ -88,9 +95,11 @@ class MongoDb extends BaseNoSqlDbService
      * @throws \InvalidArgumentException
      * @throws \Exception
      */
-    public function __construct( $settings = array() )
+    public function __construct( $settings = [ ] )
     {
         parent::__construct( $settings );
+
+        static::checkExtensions( [ 'mongo' ] );
 
         $config = ArrayUtils::clean( ArrayUtils::get( $settings, 'config' ) );
 //        Session::replaceLookups( $config, true );
@@ -104,10 +113,10 @@ class MongoDb extends BaseNoSqlDbService
             }
         }
 
-        $options = ArrayUtils::get( $config, 'options', array() );
-        if(empty($options))
+        $options = ArrayUtils::get( $config, 'options', [ ] );
+        if ( empty( $options ) )
         {
-            $options = array();
+            $options = [ ];
         }
         $user = ArrayUtils::get( $config, 'username' );
         $password = ArrayUtils::get( $config, 'password' );
@@ -117,7 +126,7 @@ class MongoDb extends BaseNoSqlDbService
         {
             $options['username'] = $user;
         }
-        if ( !isset( $options['password'] ) && isset($password) )
+        if ( !isset( $options['password'] ) && isset( $password ) )
         {
             $options['password'] = $password;
         }
@@ -147,11 +156,6 @@ class MongoDb extends BaseNoSqlDbService
         {
             //  Automatically creates a stream from context
             $driverOptions['context'] = stream_context_create( $context );
-        }
-
-        if ( !extension_loaded( 'mongo' ) )
-        {
-            throw new InternalServerErrorException( 'Mongo driver is not installed.' );
         }
 
         try

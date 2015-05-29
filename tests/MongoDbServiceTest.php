@@ -19,7 +19,7 @@
  */
 
 use DreamFactory\Library\Utility\Enums\Verbs;
-use DreamFactory\Rave\Enums\ContentTypes;
+use DreamFactory\Rave\Enums\DataFormats;
 use DreamFactory\Rave\MongoDb\Services\MongoDb;
 use DreamFactory\Rave\MongoDb\Resources\Schema;
 use DreamFactory\Rave\MongoDb\Resources\Table;
@@ -137,7 +137,7 @@ class MongoDbTest extends \DreamFactory\Rave\Testing\DbServiceTestCase
 	]
 }';
         $request = new TestServiceRequest(Verbs::POST);
-        $request->setContent($payload, ContentTypes::JSON);
+        $request->setContent($payload, DataFormats::JSON);
         $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
         $data = $rs->getContent();
         $this->assertArrayHasKey( 'record', $data );
@@ -184,7 +184,7 @@ class MongoDbTest extends \DreamFactory\Rave\Testing\DbServiceTestCase
     {
         $payload = '{"record":[{"name":"test4","complete":false}]}';
         $request = new TestServiceRequest(Verbs::POST);
-        $request->setContent($payload, ContentTypes::JSON);
+        $request->setContent($payload, DataFormats::JSON);
         $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
         $data = $rs->getContent();
         $this->assertArrayHasKey( 'record', $data );
@@ -205,7 +205,7 @@ class MongoDbTest extends \DreamFactory\Rave\Testing\DbServiceTestCase
 	]';
 
         $request = new TestServiceRequest(Verbs::POST);
-        $request->setContent($payload, ContentTypes::JSON);
+        $request->setContent($payload, DataFormats::JSON);
         $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
         $this->assertTrue( $rs->getContent() == '{"record":[{"id":5},{"id":6}]}' );
     }
@@ -215,7 +215,7 @@ class MongoDbTest extends \DreamFactory\Rave\Testing\DbServiceTestCase
         $payload = '{"record":[{"name":"test7","complete":true}]}';
 
         $request = new TestServiceRequest(Verbs::POST, [ 'fields' => 'name,complete']);
-        $request->setContent($payload, ContentTypes::JSON);
+        $request->setContent($payload, DataFormats::JSON);
         $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
         $data = $rs->getContent();
         $this->assertArrayHasKey( 'record', $data );
@@ -244,7 +244,7 @@ class MongoDbTest extends \DreamFactory\Rave\Testing\DbServiceTestCase
 }';
 
         $request = new TestServiceRequest(Verbs::POST, ['continue' => true]);
-        $request->setContent($payload, ContentTypes::JSON);
+        $request->setContent($payload, DataFormats::JSON);
         $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
         $this->assertContains( '{"error":{"context":{"error":[1],"record":[{"id":8},"SQLSTATE[23000]: ', $rs->getContent() );
         $this->assertContains( "Duplicate entry 'test5'", $rs->getContent() );
@@ -269,7 +269,7 @@ class MongoDbTest extends \DreamFactory\Rave\Testing\DbServiceTestCase
 }';
 
         $request = new TestServiceRequest(Verbs::POST, ['rollback' => true]);
-        $request->setContent($payload, ContentTypes::JSON);
+        $request->setContent($payload, DataFormats::JSON);
         $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
 
         $this->assertContains(
@@ -286,7 +286,7 @@ class MongoDbTest extends \DreamFactory\Rave\Testing\DbServiceTestCase
                     }]}';
 
         $request = new TestServiceRequest(Verbs::POST);
-        $request->setContent($payload, ContentTypes::JSON);
+        $request->setContent($payload, DataFormats::JSON);
         $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
     }
 
@@ -298,7 +298,7 @@ class MongoDbTest extends \DreamFactory\Rave\Testing\DbServiceTestCase
                     }]}';
 
         $request = new TestServiceRequest(Verbs::POST);
-        $request->setContent($payload, ContentTypes::JSON);
+        $request->setContent($payload, DataFormats::JSON);
         $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
         $this->assertContains( '{"error":{"context":null,"message":"Field \'name\' can not be NULL.","code":400}}', $rs->getContent() );
     }
@@ -310,7 +310,7 @@ class MongoDbTest extends \DreamFactory\Rave\Testing\DbServiceTestCase
                     }]}';
 
         $request = new TestServiceRequest(Verbs::POST);
-        $request->setContent($payload, ContentTypes::JSON);
+        $request->setContent($payload, DataFormats::JSON);
         $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
         $this->assertContains( '{"error":{"context":null,"message":"Required field \'name\' can not be NULL.","code":400}}', $rs->getContent() );
     }
