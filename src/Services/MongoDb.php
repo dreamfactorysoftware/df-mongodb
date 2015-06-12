@@ -1,8 +1,8 @@
 <?php
 /**
- * This file is part of the DreamFactory Rave(tm)
+ * This file is part of the DreamFactory(tm)
  *
- * DreamFactory Rave(tm) <http://github.com/dreamfactorysoftware/rave>
+ * DreamFactory(tm) <http://github.com/dreamfactorysoftware/rave>
  * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,18 +18,18 @@
  * limitations under the License.
  */
 
-namespace DreamFactory\Rave\MongoDb\Services;
+namespace DreamFactory\Core\MongoDb\Services;
 
 use DreamFactory\Library\Utility\ArrayUtils;
-use DreamFactory\Rave\Components\RequireExtensions;
-use DreamFactory\Rave\Exceptions\BadRequestException;
-use DreamFactory\Rave\Exceptions\InternalServerErrorException;
-use DreamFactory\Rave\Exceptions\NotFoundException;
-use DreamFactory\Rave\Contracts\ServiceResponseInterface;
-use DreamFactory\Rave\Services\BaseNoSqlDbService;
-use DreamFactory\Rave\Resources\BaseRestResource;
-use DreamFactory\Rave\MongoDb\Resources\Schema;
-use DreamFactory\Rave\MongoDb\Resources\Table;
+use DreamFactory\Core\Components\RequireExtensions;
+use DreamFactory\Core\Exceptions\BadRequestException;
+use DreamFactory\Core\Exceptions\InternalServerErrorException;
+use DreamFactory\Core\Exceptions\NotFoundException;
+use DreamFactory\Core\Contracts\ServiceResponseInterface;
+use DreamFactory\Core\Services\BaseNoSqlDbService;
+use DreamFactory\Core\Resources\BaseRestResource;
+use DreamFactory\Core\MongoDb\Resources\Schema;
+use DreamFactory\Core\MongoDb\Resources\Table;
 
 /**
  * MongoDb
@@ -73,12 +73,12 @@ class MongoDb extends BaseNoSqlDbService
     protected $resources = [
         Schema::RESOURCE_NAME => [
             'name'       => Schema::RESOURCE_NAME,
-            'class_name' => 'DreamFactory\\Rave\\MongoDb\\Resources\\Schema',
+            'class_name' => 'DreamFactory\\Core\\MongoDb\\Resources\\Schema',
             'label'      => 'Schema',
         ],
         Table::RESOURCE_NAME  => [
             'name'       => Table::RESOURCE_NAME,
-            'class_name' => 'DreamFactory\\Rave\\MongoDb\\Resources\\Table',
+            'class_name' => 'DreamFactory\\Core\\MongoDb\\Resources\\Table',
             'label'      => 'Table',
         ],
     ];
@@ -241,7 +241,7 @@ class MongoDb extends BaseNoSqlDbService
             // If version 1.x, the resource could be a table
 //            if ($this->request->getApiVersion())
 //            {
-//                $resource = $this->instantiateResource( 'DreamFactory\\Rave\\MongoDb\\Resources\\Table', [ 'name' => $this->resource ] );
+//                $resource = $this->instantiateResource( 'DreamFactory\\Core\\MongoDb\\Resources\\Table', [ 'name' => $this->resource ] );
 //                $newPath = $this->resourceArray;
 //                array_shift( $newPath );
 //                $newPath = implode( '/', $newPath );

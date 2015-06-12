@@ -1,8 +1,8 @@
 <?php
 /**
- * This file is part of the DreamFactory Rave(tm)
+ * This file is part of the DreamFactory(tm)
  *
- * DreamFactory Rave(tm) <http://github.com/dreamfactorysoftware/rave>
+ * DreamFactory(tm) <http://github.com/dreamfactorysoftware/rave>
  * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,13 +19,13 @@
  */
 
 use DreamFactory\Library\Utility\Enums\Verbs;
-use DreamFactory\Rave\Enums\DataFormats;
-use DreamFactory\Rave\MongoDb\Services\MongoDb;
-use DreamFactory\Rave\MongoDb\Resources\Schema;
-use DreamFactory\Rave\MongoDb\Resources\Table;
-use DreamFactory\Rave\Testing\TestServiceRequest;
+use DreamFactory\Core\Enums\DataFormats;
+use DreamFactory\Core\MongoDb\Services\MongoDb;
+use DreamFactory\Core\MongoDb\Resources\Schema;
+use DreamFactory\Core\MongoDb\Resources\Table;
+use DreamFactory\Core\Testing\TestServiceRequest;
 
-class MongoDbTest extends \DreamFactory\Rave\Testing\DbServiceTestCase
+class MongoDbTest extends \DreamFactory\Core\Testing\DbServiceTestCase
 {
     /**
      * @const string
@@ -171,7 +171,7 @@ class MongoDbTest extends \DreamFactory\Rave\Testing\DbServiceTestCase
         }
         catch (\Exception $ex)
         {
-            $this->assertInstanceOf('\DreamFactory\Rave\Common\Exceptions\RestException', $ex);
+            $this->assertInstanceOf('\DreamFactory\Core\Common\Exceptions\RestException', $ex);
             $this->assertEquals( 404, $ex->getCode());
         }
     }

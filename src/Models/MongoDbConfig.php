@@ -1,8 +1,8 @@
 <?php
 /**
- * This file is part of the DreamFactory Rave(tm)
+ * This file is part of the DreamFactory(tm)
  *
- * DreamFactory Rave(tm) <http://github.com/dreamfactorysoftware/rave>
+ * DreamFactory(tm) <http://github.com/dreamfactorysoftware/rave>
  * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the 'License');
@@ -18,12 +18,12 @@
  * limitations under the License.
  */
 
-namespace DreamFactory\Rave\MongoDb\Models;
+namespace DreamFactory\Core\MongoDb\Models;
 
 use DreamFactory\Library\Utility\ArrayUtils;
-use DreamFactory\Rave\Components\RequireExtensions;
-use DreamFactory\Rave\Exceptions\BadRequestException;
-use DreamFactory\Rave\Models\BaseServiceConfigModel;
+use DreamFactory\Core\Components\RequireExtensions;
+use DreamFactory\Core\Exceptions\BadRequestException;
+use DreamFactory\Core\Models\BaseServiceConfigModel;
 use Illuminate\Database\Query\Builder;
 
 /**
@@ -43,6 +43,8 @@ class MongoDbConfig extends BaseServiceConfigModel
     protected $table = 'mongo_db_config';
 
     protected $fillable = [ 'service_id', 'dsn', 'options', 'driver_options' ];
+
+    protected $casts = [ 'options' => 'array', 'driver_options' => 'array' ];
 
     public static function validateConfig( $config )
     {

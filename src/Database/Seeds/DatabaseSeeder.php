@@ -17,19 +17,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace DreamFactory\Rave\MongoDb\Database\Seeds;
+namespace DreamFactory\Core\MongoDb\Database\Seeds;
 
-use DreamFactory\Rave\Database\Seeds\BaseModelSeeder;
+use DreamFactory\Core\Database\Seeds\BaseModelSeeder;
 
 class DatabaseSeeder extends BaseModelSeeder
 {
-    protected $modelClass = 'DreamFactory\\Rave\\Models\\ServiceType';
+    protected $modelClass = 'DreamFactory\\Core\\Models\\ServiceType';
 
     protected $records = [
         [
             'name'           => 'mongo_db',
-            'class_name'     => 'DreamFactory\\Rave\\MongoDb\\Services\\MongoDb',
-            'config_handler' => 'DreamFactory\\Rave\\MongoDb\\Models\\MongoDbConfig',
+            'class_name'     => 'DreamFactory\\Core\\MongoDb\\Services\\MongoDb',
+            'config_handler' => 'DreamFactory\\Core\\MongoDb\\Models\\MongoDbConfig',
             'label'          => 'MongoDB',
             'description'    => 'Database service for MongoDB connections.',
             'group'          => 'Databases',

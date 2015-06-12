@@ -1,10 +1,10 @@
 {
-  "name": "dreamfactory/rave-mongodb",
-  "description": "The DreamFactory RAVE(tm) MongoDB Service.",
+  "name": "dreamfactory/df-mongodb",
+  "description": "The DreamFactory(tm) MongoDB Service.",
   "keywords": [
 	"dreamfactory",
     "dsp",
-	"rave",
+	"rest",
 	"mongodb",
 	"nosql",
 	"database",
@@ -28,27 +28,19 @@
   ],
   "support": {
 	"email": "support@dreamfactory.com",
-	"issues": "https://github.com/dreamfactorysoftware/rave/issues",
-	"wiki": "https://github.com/dreamfactorysoftware/rave/wiki",
-	"source": "https://github.com/dreamfactorysoftware/rave"
+    "source": "https://github.com/dreamfactorysoftware/df-mongodb",
+    "issues": "https://github.com/dreamfactorysoftware/df-mongodb/issues",
+    "wiki": "https://wiki.dreamfactory.com"
   },
   "minimum-stability": "dev",
   "prefer-stable": true,
 	"require": {
-	    "dreamfactory/rave": "dev-develop as dev-master"
+	    "dreamfactory/df-core": "dev-develop as dev-master"
 	},
 	"autoload": {
 		"psr-4": {
-		  	"DreamFactory\\Rave\\MongoDb\\": "src/"
+		  	"DreamFactory\\Core\\MongoDb\\": "src/"
 		}
-	},
-	"scripts": {
-		"post-install-cmd": [
-		],
-		"post-update-cmd": [
-		],
-		"post-create-project-cmd": [
-		]
 	},
 	"extra": {
 	  "branch-alias": {

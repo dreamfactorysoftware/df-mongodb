@@ -1,8 +1,8 @@
 <?php
 /**
- * This file is part of the DreamFactory Rave(tm)
+ * This file is part of the DreamFactory(tm)
  *
- * DreamFactory Rave(tm) <http://github.com/dreamfactorysoftware/rave>
+ * DreamFactory(tm) <http://github.com/dreamfactorysoftware/rave>
  * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,18 +18,18 @@
  * limitations under the License.
  */
 
-namespace DreamFactory\Rave\MongoDb\Resources;
+namespace DreamFactory\Core\MongoDb\Resources;
 
 use DreamFactory\Library\Utility\ArrayUtils;
 use DreamFactory\Library\Utility\Enums\Verbs;
 use DreamFactory\Library\Utility\Inflector;
-use DreamFactory\Rave\Exceptions\BadRequestException;
-use DreamFactory\Rave\Exceptions\InternalServerErrorException;
-use DreamFactory\Rave\Exceptions\NotFoundException;
-use DreamFactory\Rave\Exceptions\RestException;
-use DreamFactory\Rave\Resources\BaseDbTableResource;
-use DreamFactory\Rave\Utility\DbUtilities;
-use DreamFactory\Rave\MongoDb\Services\MongoDb;
+use DreamFactory\Core\Exceptions\BadRequestException;
+use DreamFactory\Core\Exceptions\InternalServerErrorException;
+use DreamFactory\Core\Exceptions\NotFoundException;
+use DreamFactory\Core\Exceptions\RestException;
+use DreamFactory\Core\Resources\BaseDbTableResource;
+use DreamFactory\Core\Utility\DbUtilities;
+use DreamFactory\Core\MongoDb\Services\MongoDb;
 
 class Table extends BaseDbTableResource
 {
