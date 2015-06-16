@@ -1,23 +1,4 @@
 <?php
-/**
- * This file is part of the DreamFactory(tm)
- *
- * DreamFactory(tm) <http://github.com/dreamfactorysoftware/rave>
- * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 use DreamFactory\Library\Utility\Enums\Verbs;
 use DreamFactory\Core\Enums\DataFormats;
 use DreamFactory\Core\MongoDb\Services\MongoDb;
@@ -49,7 +30,8 @@ class MongoDbTest extends \DreamFactory\Core\Testing\DbServiceTestCase
     {
         parent::setup();
 
-        $options = ['username' => env( 'MONGODB_USER' ), 'password' => env( 'MONGODB_PASSWORD' ), 'db' => env( 'MONGODB_DB')];
+        $options =
+            ['username' => env('MONGODB_USER'), 'password' => env('MONGODB_PASSWORD'), 'db' => env('MONGODB_DB')];
         $this->service = new MongoDb(
             [
                 'name'        => static::SERVICE_NAME,
@@ -57,7 +39,7 @@ class MongoDbTest extends \DreamFactory\Core\Testing\DbServiceTestCase
                 'description' => 'MongoDB database for testing',
                 'is_active'   => 1,
                 'type'        => 'mongo_db',
-                'config'      => [ 'dsn' => env( 'MONGODB_DSN' ), 'options' => $options ]
+                'config'      => ['dsn' => env('MONGODB_DSN'), 'options' => $options]
             ]
         );
     }
@@ -67,7 +49,7 @@ class MongoDbTest extends \DreamFactory\Core\Testing\DbServiceTestCase
         parent::tearDown();
     }
 
-    protected function buildPath( $path = '' )
+    protected function buildPath($path = '')
     {
         return $this->prefix . '/' . static::SERVICE_NAME . '/' . $path;
     }
@@ -81,8 +63,8 @@ class MongoDbTest extends \DreamFactory\Core\Testing\DbServiceTestCase
         $request = new TestServiceRequest();
         $rs = $this->service->handleRequest($request);
         $data = $rs->getContent();
-        $this->assertArrayHasKey( 'resource', $data );
-        $this->assertCount( 2, $data['resource'] );
+        $this->assertArrayHasKey('resource', $data);
+        $this->assertCount(2, $data['resource']);
 //        $this->assert( '_schema', $data['resource'] );
 //        $this->assertCount( 3, $data['resource'] );
 //        $this->assertArrayHasKey( '_table', $data['resource'] );
@@ -94,8 +76,8 @@ class MongoDbTest extends \DreamFactory\Core\Testing\DbServiceTestCase
         $request = new TestServiceRequest();
         $rs = $this->service->handleRequest($request, Schema::RESOURCE_NAME);
         $data = $rs->getContent();
-        $this->assertArrayHasKey( 'resource', $data );
-        $this->assertEmpty( $data['resource'] );
+        $this->assertArrayHasKey('resource', $data);
+        $this->assertEmpty($data['resource']);
     }
 
     public function testCreateTable()
@@ -103,8 +85,8 @@ class MongoDbTest extends \DreamFactory\Core\Testing\DbServiceTestCase
         $request = new TestServiceRequest(Verbs::POST);
         $rs = $this->service->handleRequest($request, Schema::RESOURCE_NAME . '/' . static::TABLE_NAME);
         $data = $rs->getContent();
-        $this->assertArrayHasKey( 'name', $data );
-        $this->assertSame( static::TABLE_NAME, $data['name'] );
+        $this->assertArrayHasKey('name', $data);
+        $this->assertSame(static::TABLE_NAME, $data['name']);
     }
 
     public function testGetRecordsEmpty()
@@ -112,8 +94,8 @@ class MongoDbTest extends \DreamFactory\Core\Testing\DbServiceTestCase
         $request = new TestServiceRequest();
         $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
         $data = $rs->getContent();
-        $this->assertArrayHasKey( 'record', $data );
-        $this->assertEmpty( $data['record'] );
+        $this->assertArrayHasKey('record', $data);
+        $this->assertEmpty($data['record']);
     }
 
     public function testCreateRecords()
@@ -140,8 +122,8 @@ class MongoDbTest extends \DreamFactory\Core\Testing\DbServiceTestCase
         $request->setContent($payload, DataFormats::JSON);
         $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
         $data = $rs->getContent();
-        $this->assertArrayHasKey( 'record', $data );
-        $this->assertCount( 3, $data['record'] );
+        $this->assertArrayHasKey('record', $data);
+        $this->assertCount(3, $data['record']);
     }
 
     public function testGetRecordById()
@@ -149,7 +131,7 @@ class MongoDbTest extends \DreamFactory\Core\Testing\DbServiceTestCase
         $request = new TestServiceRequest();
         $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME . '/1');
         $data = $rs->getContent();
-        $this->assertTrue( $data[Table::DEFAULT_ID_FIELD] == 1 );
+        $this->assertTrue($data[Table::DEFAULT_ID_FIELD] == 1);
     }
 
     public function testGetRecordsByIds()
@@ -157,22 +139,19 @@ class MongoDbTest extends \DreamFactory\Core\Testing\DbServiceTestCase
         $request = new TestServiceRequest(Verbs::GET, ['ids' => '1,2,3']);
         $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
         $data = $rs->getContent();
-        $ids = implode( ",", array_column( $data['record'], Table::DEFAULT_ID_FIELD ) );
-        $this->assertTrue( $ids == "1,2,3" );
+        $ids = implode(",", array_column($data['record'], Table::DEFAULT_ID_FIELD));
+        $this->assertTrue($ids == "1,2,3");
     }
 
     public function testResourceNotFound()
     {
         $request = new TestServiceRequest(Verbs::GET);
-        try
-        {
-            $rs = $this->service->handleRequest( $request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME . '/5' );
+        try {
+            $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME . '/5');
             $this->assertTrue(false);
-        }
-        catch (\Exception $ex)
-        {
+        } catch (\Exception $ex) {
             $this->assertInstanceOf('\DreamFactory\Core\Common\Exceptions\RestException', $ex);
-            $this->assertEquals( 404, $ex->getCode());
+            $this->assertEquals(404, $ex->getCode());
         }
     }
 
@@ -187,8 +166,8 @@ class MongoDbTest extends \DreamFactory\Core\Testing\DbServiceTestCase
         $request->setContent($payload, DataFormats::JSON);
         $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
         $data = $rs->getContent();
-        $this->assertArrayHasKey( 'record', $data );
-        $this->assertCount( 1, $data['record'] );
+        $this->assertArrayHasKey('record', $data);
+        $this->assertCount(1, $data['record']);
     }
 
     public function testCreateRecordsNoWrap()
@@ -207,21 +186,21 @@ class MongoDbTest extends \DreamFactory\Core\Testing\DbServiceTestCase
         $request = new TestServiceRequest(Verbs::POST);
         $request->setContent($payload, DataFormats::JSON);
         $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
-        $this->assertTrue( $rs->getContent() == '{"record":[{"id":5},{"id":6}]}' );
+        $this->assertTrue($rs->getContent() == '{"record":[{"id":5},{"id":6}]}');
     }
 
     public function testCreateRecordReturnFields()
     {
         $payload = '{"record":[{"name":"test7","complete":true}]}';
 
-        $request = new TestServiceRequest(Verbs::POST, [ 'fields' => 'name,complete']);
+        $request = new TestServiceRequest(Verbs::POST, ['fields' => 'name,complete']);
         $request->setContent($payload, DataFormats::JSON);
         $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
         $data = $rs->getContent();
-        $this->assertArrayHasKey( 'record', $data );
-        $this->assertCount( 1, $data['record'] );
-        $this->assertArrayHasKey( 'name', $data['record'][0] );
-        $this->assertArrayHasKey( 'complete', $data['record'][0] );
+        $this->assertArrayHasKey('record', $data);
+        $this->assertCount(1, $data['record']);
+        $this->assertArrayHasKey('name', $data['record'][0]);
+        $this->assertArrayHasKey('complete', $data['record'][0]);
     }
 
     public function testCreateRecordsWithContinue()
@@ -246,8 +225,9 @@ class MongoDbTest extends \DreamFactory\Core\Testing\DbServiceTestCase
         $request = new TestServiceRequest(Verbs::POST, ['continue' => true]);
         $request->setContent($payload, DataFormats::JSON);
         $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
-        $this->assertContains( '{"error":{"context":{"error":[1],"record":[{"id":8},"SQLSTATE[23000]: ', $rs->getContent() );
-        $this->assertContains( "Duplicate entry 'test5'", $rs->getContent() );
+        $this->assertContains('{"error":{"context":{"error":[1],"record":[{"id":8},"SQLSTATE[23000]: ',
+            $rs->getContent());
+        $this->assertContains("Duplicate entry 'test5'", $rs->getContent());
     }
 
     public function testCreateRecordsWithRollback()
@@ -300,7 +280,8 @@ class MongoDbTest extends \DreamFactory\Core\Testing\DbServiceTestCase
         $request = new TestServiceRequest(Verbs::POST);
         $request->setContent($payload, DataFormats::JSON);
         $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
-        $this->assertContains( '{"error":{"context":null,"message":"Field \'name\' can not be NULL.","code":400}}', $rs->getContent() );
+        $this->assertContains('{"error":{"context":null,"message":"Field \'name\' can not be NULL.","code":400}}',
+            $rs->getContent());
     }
 
     public function testCreateRecordFailMissingRequiredField()
@@ -312,7 +293,8 @@ class MongoDbTest extends \DreamFactory\Core\Testing\DbServiceTestCase
         $request = new TestServiceRequest(Verbs::POST);
         $request->setContent($payload, DataFormats::JSON);
         $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
-        $this->assertContains( '{"error":{"context":null,"message":"Required field \'name\' can not be NULL.","code":400}}', $rs->getContent() );
+        $this->assertContains('{"error":{"context":null,"message":"Required field \'name\' can not be NULL.","code":400}}',
+            $rs->getContent());
     }
 
 //    /************************************************

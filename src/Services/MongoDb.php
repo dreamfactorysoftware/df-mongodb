@@ -1,24 +1,5 @@
 <?php
-/**
- * This file is part of the DreamFactory(tm)
- *
- * DreamFactory(tm) <http://github.com/dreamfactorysoftware/rave>
- * Copyright 2012-2014 DreamFactory Software, Inc. <support@dreamfactory.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-namespace DreamFactory\Core\MongoDb\Services;
+ namespace DreamFactory\Core\MongoDb\Services;
 
 use DreamFactory\Library\Utility\ArrayUtils;
 use DreamFactory\Core\Components\RequireExtensions;
@@ -95,78 +76,65 @@ class MongoDb extends BaseNoSqlDbService
      * @throws \InvalidArgumentException
      * @throws \Exception
      */
-    public function __construct( $settings = [ ] )
+    public function __construct($settings = [])
     {
-        parent::__construct( $settings );
+        parent::__construct($settings);
 
-        static::checkExtensions( [ 'mongo' ] );
+        static::checkExtensions(['mongo']);
 
-        $config = ArrayUtils::clean( ArrayUtils::get( $settings, 'config' ) );
+        $config = ArrayUtils::clean(ArrayUtils::get($settings, 'config'));
 //        Session::replaceLookups( $config, true );
 
-        $dsn = strval( ArrayUtils::get( $config, 'dsn' ) );
-        if ( !empty( $dsn ) )
-        {
-            if ( 0 != substr_compare( $dsn, static::DSN_PREFIX, 0, static::DSN_PREFIX_LENGTH, true ) )
-            {
+        $dsn = strval(ArrayUtils::get($config, 'dsn'));
+        if (!empty($dsn)) {
+            if (0 != substr_compare($dsn, static::DSN_PREFIX, 0, static::DSN_PREFIX_LENGTH, true)) {
                 $dsn = static::DSN_PREFIX . $dsn;
             }
         }
 
-        $options = ArrayUtils::get( $config, 'options', [ ] );
-        if ( empty( $options ) )
-        {
-            $options = [ ];
+        $options = ArrayUtils::get($config, 'options', []);
+        if (empty($options)) {
+            $options = [];
         }
-        $user = ArrayUtils::get( $config, 'username' );
-        $password = ArrayUtils::get( $config, 'password' );
+        $user = ArrayUtils::get($config, 'username');
+        $password = ArrayUtils::get($config, 'password');
 
         // support old configuration options of user, pwd, and db in credentials directly
-        if ( !isset( $options['username'] ) && isset( $user ) )
-        {
+        if (!isset($options['username']) && isset($user)) {
             $options['username'] = $user;
         }
-        if ( !isset( $options['password'] ) && isset( $password ) )
-        {
+        if (!isset($options['password']) && isset($password)) {
             $options['password'] = $password;
         }
-        if ( !isset( $options['db'] ) && ( null !== $db = ArrayUtils::get( $config, 'db', null, true ) ) )
-        {
+        if (!isset($options['db']) && (null !== $db = ArrayUtils::get($config, 'db', null, true))) {
             $options['db'] = $db;
         }
 
-        if ( !isset( $db ) && ( null === $db = ArrayUtils::get( $options, 'db', null, true ) ) )
-        {
+        if (!isset($db) && (null === $db = ArrayUtils::get($options, 'db', null, true))) {
             //  Attempt to find db in connection string
-            $db = strstr( substr( $dsn, static::DSN_PREFIX_LENGTH ), '/' );
-            if ( false !== $_pos = strpos( $db, '?' ) )
-            {
-                $db = substr( $db, 0, $_pos );
+            $db = strstr(substr($dsn, static::DSN_PREFIX_LENGTH), '/');
+            if (false !== $_pos = strpos($db, '?')) {
+                $db = substr($db, 0, $_pos);
             }
-            $db = trim( $db, '/' );
+            $db = trim($db, '/');
         }
 
-        if ( empty( $db ) )
-        {
-            throw new InternalServerErrorException( "No MongoDb database selected in configuration." );
+        if (empty($db)) {
+            throw new InternalServerErrorException("No MongoDb database selected in configuration.");
         }
 
-        $driverOptions = ArrayUtils::clean( ArrayUtils::get( $config, 'driver_options' ) );
-        if ( null !== $context = ArrayUtils::get( $driverOptions, 'context' ) )
-        {
+        $driverOptions = ArrayUtils::clean(ArrayUtils::get($config, 'driver_options'));
+        if (null !== $context = ArrayUtils::get($driverOptions, 'context')) {
             //  Automatically creates a stream from context
-            $driverOptions['context'] = stream_context_create( $context );
+            $driverOptions['context'] = stream_context_create($context);
         }
 
-        try
-        {
-            $client = @new \MongoClient( $dsn, $options, $driverOptions );
+        try {
+            $client = @new \MongoClient($dsn, $options, $driverOptions);
 
-            $this->dbConn = $client->selectDB( $db );
-        }
-        catch ( \Exception $_ex )
-        {
-            throw new InternalServerErrorException( "Unexpected MongoDb Service Exception:\n{$_ex->getMessage()}" );
+            $this->dbConn = $client->selectDB($db);
+        } catch (\Exception $_ex) {
+            throw new InternalServerErrorException("Unexpected MongoDb Service Exception:\n{$_ex->getMessage()}");
         }
     }
 
@@ -175,13 +143,10 @@ class MongoDb extends BaseNoSqlDbService
      */
     public function __destruct()
     {
-        try
-        {
+        try {
             $this->dbConn = null;
-        }
-        catch ( \Exception $_ex )
-        {
-            error_log( "Failed to disconnect from database.\n{$_ex->getMessage()}" );
+        } catch (\Exception $_ex) {
+            error_log("Failed to disconnect from database.\n{$_ex->getMessage()}");
         }
     }
 
@@ -190,9 +155,8 @@ class MongoDb extends BaseNoSqlDbService
      */
     public function getConnection()
     {
-        if ( !isset( $this->dbConn ) )
-        {
-            throw new InternalServerErrorException( 'Database connection has not been initialized.' );
+        if (!isset($this->dbConn)) {
+            throw new InternalServerErrorException('Database connection has not been initialized.');
         }
 
         return $this->dbConn;
@@ -205,23 +169,20 @@ class MongoDb extends BaseNoSqlDbService
      * @throws BadRequestException
      * @throws NotFoundException
      */
-    public function correctTableName( &$name )
+    public function correctTableName(&$name)
     {
         static $_existing = null;
 
-        if ( !$_existing )
-        {
+        if (!$_existing) {
             $_existing = $this->dbConn->getCollectionNames();
         }
 
-        if ( empty( $name ) )
-        {
-            throw new BadRequestException( 'Table name can not be empty.' );
+        if (empty($name)) {
+            throw new BadRequestException('Table name can not be empty.');
         }
 
-        if ( false === array_search( $name, $_existing ) )
-        {
-            throw new NotFoundException( "Table '$name' not found." );
+        if (false === array_search($name, $_existing)) {
+            throw new NotFoundException("Table '$name' not found.");
         }
 
         return $name;
@@ -230,14 +191,11 @@ class MongoDb extends BaseNoSqlDbService
     /**
      * {@InheritDoc}
      */
-    protected function handleResource( array $resources )
+    protected function handleResource(array $resources)
     {
-        try
-        {
-            return parent::handleResource( $resources );
-        }
-        catch ( NotFoundException $_ex )
-        {
+        try {
+            return parent::handleResource($resources);
+        } catch (NotFoundException $_ex) {
             // If version 1.x, the resource could be a table
 //            if ($this->request->getApiVersion())
 //            {
@@ -266,55 +224,48 @@ class MongoDb extends BaseNoSqlDbService
     /**
      * {@inheritdoc}
      */
-    public function listResources( $fields = null )
+    public function listResources($fields = null)
     {
-        if ( !$this->request->getParameterAsBool( 'as_access_components' ) )
-        {
-            return parent::listResources( $fields );
+        if (!$this->request->getParameterAsBool('as_access_components')) {
+            return parent::listResources($fields);
         }
 
-        $_resources = [ ];
+        $_resources = [];
 
 //        $refresh = $this->request->queryBool( 'refresh' );
 
         $_name = Schema::RESOURCE_NAME . '/';
-        $_access = $this->getPermissions( $_name );
-        if ( !empty( $_access ) )
-        {
+        $_access = $this->getPermissions($_name);
+        if (!empty($_access)) {
             $_resources[] = $_name;
             $_resources[] = $_name . '*';
         }
 
         $_result = $this->dbConn->getCollectionNames();
-        foreach ( $_result as $_name )
-        {
+        foreach ($_result as $_name) {
             $_name = Schema::RESOURCE_NAME . '/' . $_name;
-            $_access = $this->getPermissions( $_name );
-            if ( !empty( $_access ) )
-            {
+            $_access = $this->getPermissions($_name);
+            if (!empty($_access)) {
                 $_resources[] = $_name;
             }
         }
 
         $_name = Table::RESOURCE_NAME . '/';
-        $_access = $this->getPermissions( $_name );
-        if ( !empty( $_access ) )
-        {
+        $_access = $this->getPermissions($_name);
+        if (!empty($_access)) {
             $_resources[] = $_name;
             $_resources[] = $_name . '*';
         }
 
-        foreach ( $_result as $_name )
-        {
+        foreach ($_result as $_name) {
             $_name = Table::RESOURCE_NAME . '/' . $_name;
-            $_access = $this->getPermissions( $_name );
-            if ( !empty( $_access ) )
-            {
+            $_access = $this->getPermissions($_name);
+            if (!empty($_access)) {
                 $_resources[] = $_name;
             }
         }
 
-        return [ 'resource' => $_resources ];
+        return ['resource' => $_resources];
     }
 
     /**
