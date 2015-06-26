@@ -8,7 +8,6 @@ use DreamFactory\Core\Exceptions\InternalServerErrorException;
 use DreamFactory\Core\Exceptions\NotFoundException;
 use DreamFactory\Core\Contracts\ServiceResponseInterface;
 use DreamFactory\Core\Services\BaseNoSqlDbService;
-use DreamFactory\Core\Resources\BaseRestResource;
 use DreamFactory\Core\MongoDb\Resources\Schema;
 use DreamFactory\Core\MongoDb\Resources\Table;
 
@@ -54,12 +53,12 @@ class MongoDb extends BaseNoSqlDbService
     protected $resources = [
         Schema::RESOURCE_NAME => [
             'name'       => Schema::RESOURCE_NAME,
-            'class_name' => 'DreamFactory\\Core\\MongoDb\\Resources\\Schema',
+            'class_name' => Schema::class,
             'label'      => 'Schema',
         ],
         Table::RESOURCE_NAME  => [
             'name'       => Table::RESOURCE_NAME,
-            'class_name' => 'DreamFactory\\Core\\MongoDb\\Resources\\Table',
+            'class_name' => Table::class,
             'label'      => 'Table',
         ],
     ];
@@ -199,7 +198,7 @@ class MongoDb extends BaseNoSqlDbService
             // If version 1.x, the resource could be a table
 //            if ($this->request->getApiVersion())
 //            {
-//                $resource = $this->instantiateResource( 'DreamFactory\\Core\\MongoDb\\Resources\\Table', [ 'name' => $this->resource ] );
+//                $resource = $this->instantiateResource( Table::class, [ 'name' => $this->resource ] );
 //                $newPath = $this->resourceArray;
 //                array_shift( $newPath );
 //                $newPath = implode( '/', $newPath );
