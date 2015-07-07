@@ -37,7 +37,7 @@ class MongoDbTest extends \DreamFactory\Core\Testing\DbServiceTestCase
                 'name'        => static::SERVICE_NAME,
                 'label'       => 'MongoDB Database',
                 'description' => 'MongoDB database for testing',
-                'is_active'   => 1,
+                'is_active'   => true,
                 'type'        => 'mongo_db',
                 'config'      => ['dsn' => env('MONGODB_DSN'), 'options' => $options]
             ]
