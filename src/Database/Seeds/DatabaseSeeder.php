@@ -17,7 +17,7 @@ class DatabaseSeeder extends BaseModelSeeder
             'config_handler' => MongoDbConfig::class,
             'label'          => 'MongoDB',
             'description'    => 'Database service for MongoDB connections.',
-            'group'          => 'Databases',
+            'group'          => 'Database',
             'singleton'      => false,
         ]
     ];

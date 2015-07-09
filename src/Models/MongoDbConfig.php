@@ -39,4 +39,28 @@ class MongoDbConfig extends BaseServiceConfigModel
 
         return true;
     }
+
+    /**
+     * @param array $schema
+     */
+    protected static function prepareConfigSchemaField(array &$schema)
+    {
+        parent::prepareConfigSchemaField($schema);
+
+        switch ($schema['name']) {
+            case 'dsn':
+                $schema['label'] = 'Connection String';
+                $schema['default'] = 'mongodb://[username:password@]host1[:port1][,host2[:port2:],...]/db';
+                $schema['description'] =
+                    'The username, password, and db fields can be added in the connection string or in the options below.' .
+                    ' For further information, see http://php.net/manual/en/mongoclient.construct.php.';
+                break;
+            case 'options':
+                $schema['type'] = 'object(string,string)';
+                break;
+            case 'driver_options':
+                $schema['type'] = 'object(string,string)';
+                break;
+        }
+    }
 }
