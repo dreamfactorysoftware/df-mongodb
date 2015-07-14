@@ -63,12 +63,12 @@ class MongoDbTest extends \DreamFactory\Core\Testing\DbServiceTestCase
         $request = new TestServiceRequest();
         $rs = $this->service->handleRequest($request);
         $data = $rs->getContent();
-        $this->assertArrayHasKey('resource', $data);
-        $this->assertCount(2, $data['resource']);
-//        $this->assert( '_schema', $data['resource'] );
-//        $this->assertCount( 3, $data['resource'] );
-//        $this->assertArrayHasKey( '_table', $data['resource'] );
-//        $this->assertCount( 3, $data['resource'] );
+        $this->assertArrayHasKey(static::$wrapper, $data);
+        $this->assertCount(2, $data[static::$wrapper]);
+//        $this->assert( '_schema', $data[static::$wrapper] );
+//        $this->assertCount( 3, $data[static::$wrapper] );
+//        $this->assertArrayHasKey( '_table', $data[static::$wrapper] );
+//        $this->assertCount( 3, $data[static::$wrapper] );
     }
 
     public function testSchemaEmpty()
@@ -76,8 +76,8 @@ class MongoDbTest extends \DreamFactory\Core\Testing\DbServiceTestCase
         $request = new TestServiceRequest();
         $rs = $this->service->handleRequest($request, Schema::RESOURCE_NAME);
         $data = $rs->getContent();
-        $this->assertArrayHasKey('resource', $data);
-        $this->assertEmpty($data['resource']);
+        $this->assertArrayHasKey(static::$wrapper, $data);
+        $this->assertEmpty($data[static::$wrapper]);
     }
 
     public function testCreateTable()
@@ -94,8 +94,8 @@ class MongoDbTest extends \DreamFactory\Core\Testing\DbServiceTestCase
         $request = new TestServiceRequest();
         $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
         $data = $rs->getContent();
-        $this->assertArrayHasKey('record', $data);
-        $this->assertEmpty($data['record']);
+        $this->assertArrayHasKey(static::$wrapper, $data);
+        $this->assertEmpty($data[static::$wrapper]);
     }
 
     public function testCreateRecords()
@@ -122,8 +122,8 @@ class MongoDbTest extends \DreamFactory\Core\Testing\DbServiceTestCase
         $request->setContent($payload, DataFormats::JSON);
         $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
         $data = $rs->getContent();
-        $this->assertArrayHasKey('record', $data);
-        $this->assertCount(3, $data['record']);
+        $this->assertArrayHasKey(static::$wrapper, $data);
+        $this->assertCount(3, $data[static::$wrapper]);
     }
 
     public function testGetRecordById()
@@ -139,7 +139,7 @@ class MongoDbTest extends \DreamFactory\Core\Testing\DbServiceTestCase
         $request = new TestServiceRequest(Verbs::GET, ['ids' => '1,2,3']);
         $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
         $data = $rs->getContent();
-        $ids = implode(",", array_column($data['record'], Table::DEFAULT_ID_FIELD));
+        $ids = implode(",", array_column($data[static::$wrapper], Table::DEFAULT_ID_FIELD));
         $this->assertTrue($ids == "1,2,3");
     }
 
@@ -166,8 +166,8 @@ class MongoDbTest extends \DreamFactory\Core\Testing\DbServiceTestCase
         $request->setContent($payload, DataFormats::JSON);
         $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
         $data = $rs->getContent();
-        $this->assertArrayHasKey('record', $data);
-        $this->assertCount(1, $data['record']);
+        $this->assertArrayHasKey(static::$wrapper, $data);
+        $this->assertCount(1, $data[static::$wrapper]);
     }
 
     public function testCreateRecordsNoWrap()
@@ -197,10 +197,10 @@ class MongoDbTest extends \DreamFactory\Core\Testing\DbServiceTestCase
         $request->setContent($payload, DataFormats::JSON);
         $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
         $data = $rs->getContent();
-        $this->assertArrayHasKey('record', $data);
-        $this->assertCount(1, $data['record']);
-        $this->assertArrayHasKey('name', $data['record'][0]);
-        $this->assertArrayHasKey('complete', $data['record'][0]);
+        $this->assertArrayHasKey(static::$wrapper, $data);
+        $this->assertCount(1, $data[static::$wrapper]);
+        $this->assertArrayHasKey('name', $data[static::$wrapper][0]);
+        $this->assertArrayHasKey('complete', $data[static::$wrapper][0]);
     }
 
     public function testCreateRecordsWithContinue()
@@ -355,8 +355,8 @@ class MongoDbTest extends \DreamFactory\Core\Testing\DbServiceTestCase
 //
 //        $result = $this->call( Verbs::GET, $this->buildPath( '_table/todo?ids=1,2,3') );
 //        $ra = json_decode( $result->getContent(), true );
-//        $dColumn = implode( ",", array_column( $ra['record'], 'description' ) );
-//        $lColumn = implode( ",", array_column( $ra['record'], 'label' ) );
+//        $dColumn = implode( ",", array_column( $ra[static::$wrapper], 'description' ) );
+//        $lColumn = implode( ",", array_column( $ra[static::$wrapper], 'label' ) );
 //
 //        $this->assertEquals( "Local Database,Local Database 2,Local Database 3", $dColumn );
 //        $this->assertEquals( "Database,Database 2,Database 3", $lColumn );
@@ -396,8 +396,8 @@ class MongoDbTest extends \DreamFactory\Core\Testing\DbServiceTestCase
 //
 //        $result = $this->call( Verbs::GET, $this->buildPath( '_table/todo?ids=1,2,3') );
 //        $ra = json_decode( $result->getContent(), true );
-//        $dColumn = implode( ",", array_column( $ra['record'], 'description' ) );
-//        $lColumn = implode( ",", array_column( $ra['record'], 'label' ) );
+//        $dColumn = implode( ",", array_column( $ra[static::$wrapper], 'description' ) );
+//        $lColumn = implode( ",", array_column( $ra[static::$wrapper], 'label' ) );
 //
 //        $this->assertEquals( "unit-test-description,unit-test-description,unit-test-description", $dColumn );
 //        $this->assertEquals( "unit-test-label,unit-test-label,unit-test-label", $lColumn );
@@ -433,8 +433,8 @@ class MongoDbTest extends \DreamFactory\Core\Testing\DbServiceTestCase
 //
 //        $result = $this->call( Verbs::GET, $this->buildPath( '_table/todo?ids=1,2,3') );
 //        $ra = json_decode( $result->getContent(), true );
-//        $dColumn = implode( ",", array_column( $ra['record'], 'description' ) );
-//        $lColumn = implode( ",", array_column( $ra['record'], 'label' ) );
+//        $dColumn = implode( ",", array_column( $ra[static::$wrapper], 'description' ) );
+//        $lColumn = implode( ",", array_column( $ra[static::$wrapper], 'label' ) );
 //
 //        $this->assertEquals( "unit-test-d1,unit-test-d2,unit-test-d3", $dColumn );
 //        $this->assertEquals( "unit-test-l1,unit-test-l2,unit-test-l3", $lColumn );
@@ -502,8 +502,8 @@ class MongoDbTest extends \DreamFactory\Core\Testing\DbServiceTestCase
 //
 //        $result = $this->call( Verbs::GET, $this->buildPath( '_table/todo?ids=1,2,3') );
 //        $ra = json_decode( $result->getContent(), true );
-//        $dColumn = implode( ",", array_column( $ra['record'], 'description' ) );
-//        $lColumn = implode( ",", array_column( $ra['record'], 'label' ) );
+//        $dColumn = implode( ",", array_column( $ra[static::$wrapper], 'description' ) );
+//        $lColumn = implode( ",", array_column( $ra[static::$wrapper], 'label' ) );
 //
 //        $this->assertEquals( "unit-test-d1,Local Database 2,unit-test-d3", $dColumn );
 //        $this->assertEquals( "unit-test-l1,Database 2,unit-test-l3", $lColumn );

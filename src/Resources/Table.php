@@ -70,7 +70,7 @@ class Table extends BaseDbTableResource
         $_names = $this->service->getConnection()->getCollectionNames();
 
         if (empty($fields)) {
-            return ['resource' => $_names];
+            return $this->cleanResources($_names);
         }
 
         $_extras =
@@ -99,7 +99,7 @@ class Table extends BaseDbTableResource
             $_tables[] = ['name' => $name, 'label' => $label, 'plural' => $plural];
         }
 
-        return $this->makeResourceList($_tables, 'name', $fields, 'resource');
+        return $this->cleanResources($_tables, 'name', $fields);
     }
 
     /**
@@ -1259,7 +1259,8 @@ class Table extends BaseDbTableResource
                     }
 
                     if (!empty($_errors)) {
-                        $_context = array('error' => $_errors, 'record' => $_out);
+                        $wrapper = \Config::get('df.resources_wrapper', 'resource');
+                        $_context = array('error' => $_errors, $wrapper => $_out);
                         throw new NotFoundException('Batch Error: Not all records could be retrieved.', null, null,
                             $_context);
                     }
