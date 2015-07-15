@@ -100,24 +100,26 @@ class MongoDbTest extends \DreamFactory\Core\Testing\DbServiceTestCase
 
     public function testCreateRecords()
     {
-        $payload = '{
-	"record": [
-		{
-		    "_id": 1,
-			"name": "test1",
-			"complete": false
-		},
-		{
-		    "_id": 2,
-			"name": "test2",
-			"complete": true
-		},
-		{
-		    "_id": 3,
-			"name": "test3"
-		}
-	]
-}';
+        $payload = '[
+            {
+                "_id": 1,
+                "name": "test1",
+                "complete": false
+            },
+            {
+                "_id": 2,
+                "name": "test2",
+                "complete": true
+            },
+            {
+                "_id": 3,
+                "name": "test3"
+            }
+	    ]';
+
+        if (static::$wrapper) {
+            $payload = '{' . static::$wrapper . ': ' . $payload . '}';
+        }
         $request = new TestServiceRequest(Verbs::POST);
         $request->setContent($payload, DataFormats::JSON);
         $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
@@ -161,7 +163,10 @@ class MongoDbTest extends \DreamFactory\Core\Testing\DbServiceTestCase
 
     public function testCreateRecord()
     {
-        $payload = '{"record":[{"name":"test4","complete":false}]}';
+        $payload = '[{"name":"test4","complete":false}]';
+        if (static::$wrapper) {
+            $payload = '{' . static::$wrapper . ': ' . $payload . '}';
+        }
         $request = new TestServiceRequest(Verbs::POST);
         $request->setContent($payload, DataFormats::JSON);
         $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
@@ -186,12 +191,19 @@ class MongoDbTest extends \DreamFactory\Core\Testing\DbServiceTestCase
         $request = new TestServiceRequest(Verbs::POST);
         $request->setContent($payload, DataFormats::JSON);
         $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
-        $this->assertTrue($rs->getContent() == '{"record":[{"id":5},{"id":6}]}');
+        $expected = '[{"id":5},{"id":6}]';
+        if (static::$wrapper) {
+            $expected = '{' . static::$wrapper . ': ' . $payload . '}';
+        }
+        $this->assertTrue($rs->getContent() == $expected);
     }
 
     public function testCreateRecordReturnFields()
     {
-        $payload = '{"record":[{"name":"test7","complete":true}]}';
+        $payload = '[{"name":"test7","complete":true}]';
+        if (static::$wrapper) {
+            $payload = '{' . static::$wrapper . ': ' . $payload . '}';
+        }
 
         $request = new TestServiceRequest(Verbs::POST, ['fields' => 'name,complete']);
         $request->setContent($payload, DataFormats::JSON);
@@ -205,65 +217,67 @@ class MongoDbTest extends \DreamFactory\Core\Testing\DbServiceTestCase
 
     public function testCreateRecordsWithContinue()
     {
-        $payload = '{
-	"record": [
-		{
-			"name": "test8",
-			"complete": false
-		},
-		{
-			"name": "test5",
-			"complete": true
-		},
-		{
-			"name": "test9",
-			"complete": null
-		}
-	]
-}';
+        $payload = '[
+            {
+                "name": "test8",
+                "complete": false
+            },
+            {
+                "name": "test5",
+                "complete": true
+            },
+            {
+                "name": "test9",
+                "complete": null
+            }
+        ]';
 
+        if (static::$wrapper) {
+            $payload = '{' . static::$wrapper . ': ' . $payload . '}';
+        }
         $request = new TestServiceRequest(Verbs::POST, ['continue' => true]);
         $request->setContent($payload, DataFormats::JSON);
         $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
-        $this->assertContains('{"error":{"context":{"error":[1],"record":[{"id":8},"SQLSTATE[23000]: ',
-            $rs->getContent());
+        $err = '{"error":{"context":{"error":[1],' . static::$wrapper . ':[{"id":8},"SQLSTATE[23000]: ';
+        $this->assertContains($err, $rs->getContent());
         $this->assertContains("Duplicate entry 'test5'", $rs->getContent());
     }
 
     public function testCreateRecordsWithRollback()
     {
-        $payload = '{
-	"record": [
-		{
-			"name": "testRollback",
-			"complete": false
-		},
-		{
-			"name": "test5",
-			"complete": true
-		},
-		{
-			"name": "testAfter"
-		}
-	]
-}';
+        $payload = '[
+            {
+                "name": "testRollback",
+                "complete": false
+            },
+            {
+                "name": "test5",
+                "complete": true
+            },
+            {
+                "name": "testAfter"
+            }
+        ]';
+        if (static::$wrapper) {
+            $payload = '{' . static::$wrapper . ': ' . $payload . '}';
+        }
 
         $request = new TestServiceRequest(Verbs::POST, ['rollback' => true]);
         $request->setContent($payload, DataFormats::JSON);
         $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
-
-        $this->assertContains(
-            '{"error":{"context":{"error":[1],"record":[{"id":11},"SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry \'test5\'',
-            $rs->getContent()
-        );
+        $err =
+            '{"error":{"context":{"error":[1],' .
+            static::$wrapper .
+            ':[{"id":11},"SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry \'test5\'';
+        $this->assertContains($err, $rs->getContent());
     }
 
     public function testCreateRecordBadRequest()
     {
-        $payload = '{"record":[{
-                        "name":"test1",
-                        "complete":true
-                    }]}';
+        $payload = '[{"name":"test1", "complete":true}]';
+        if (static::$wrapper) {
+            $payload = '{' . static::$wrapper . ': ' . $payload . '}';
+        }
 
         $request = new TestServiceRequest(Verbs::POST);
         $request->setContent($payload, DataFormats::JSON);
@@ -272,10 +286,10 @@ class MongoDbTest extends \DreamFactory\Core\Testing\DbServiceTestCase
 
     public function testCreateRecordFailNotNullField()
     {
-        $payload = '{"record":[{
-                        "name":null,
-                        "complete":true
-                    }]}';
+        $payload = '[{"name":null, "complete":true}]';
+        if (static::$wrapper) {
+            $payload = '{' . static::$wrapper . ': ' . $payload . '}';
+        }
 
         $request = new TestServiceRequest(Verbs::POST);
         $request->setContent($payload, DataFormats::JSON);
@@ -286,9 +300,10 @@ class MongoDbTest extends \DreamFactory\Core\Testing\DbServiceTestCase
 
     public function testCreateRecordFailMissingRequiredField()
     {
-        $payload = '{"record":[{
-                        "complete":true
-                    }]}';
+        $payload = '[{"complete":true}]';
+        if (static::$wrapper) {
+            $payload = '{' . static::$wrapper . ': ' . $payload . '}';
+        }
 
         $request = new TestServiceRequest(Verbs::POST);
         $request->setContent($payload, DataFormats::JSON);
