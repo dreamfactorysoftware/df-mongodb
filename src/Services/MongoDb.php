@@ -1,5 +1,5 @@
 <?php
- namespace DreamFactory\Core\MongoDb\Services;
+namespace DreamFactory\Core\MongoDb\Services;
 
 use DreamFactory\Library\Utility\ArrayUtils;
 use DreamFactory\Core\Components\RequireExtensions;
@@ -211,60 +211,52 @@ class MongoDb extends BaseNoSqlDbService
     }
 
     /**
-     * @return array
-     */
-    protected function getResources()
-    {
-        return $this->resources;
-    }
-
-    // REST service implementation
-
-    /**
      * {@inheritdoc}
      */
-    public function listResources($fields = null)
+    public function getResources($only_handlers = false)
     {
-        if (!$this->request->getParameterAsBool('as_access_components')) {
-            return parent::listResources($fields);
-        }
-
-        $_resources = [];
+        if (!$only_handlers) {
+            if ($this->request->getParameterAsBool('as_access_components')) {
+                $_resources = [];
 
 //        $refresh = $this->request->queryBool( 'refresh' );
 
-        $_name = Schema::RESOURCE_NAME . '/';
-        $_access = $this->getPermissions($_name);
-        if (!empty($_access)) {
-            $_resources[] = $_name;
-            $_resources[] = $_name . '*';
-        }
+                $_name = Schema::RESOURCE_NAME . '/';
+                $_access = $this->getPermissions($_name);
+                if (!empty($_access)) {
+                    $_resources[] = $_name;
+                    $_resources[] = $_name . '*';
+                }
 
-        $_result = $this->dbConn->getCollectionNames();
-        foreach ($_result as $_name) {
-            $_name = Schema::RESOURCE_NAME . '/' . $_name;
-            $_access = $this->getPermissions($_name);
-            if (!empty($_access)) {
-                $_resources[] = $_name;
+                $_result = $this->dbConn->getCollectionNames();
+                foreach ($_result as $_name) {
+                    $_name = Schema::RESOURCE_NAME . '/' . $_name;
+                    $_access = $this->getPermissions($_name);
+                    if (!empty($_access)) {
+                        $_resources[] = $_name;
+                    }
+                }
+
+                $_name = Table::RESOURCE_NAME . '/';
+                $_access = $this->getPermissions($_name);
+                if (!empty($_access)) {
+                    $_resources[] = $_name;
+                    $_resources[] = $_name . '*';
+                }
+
+                foreach ($_result as $_name) {
+                    $_name = Table::RESOURCE_NAME . '/' . $_name;
+                    $_access = $this->getPermissions($_name);
+                    if (!empty($_access)) {
+                        $_resources[] = $_name;
+                    }
+                }
+
+                return $_resources;
             }
         }
 
-        $_name = Table::RESOURCE_NAME . '/';
-        $_access = $this->getPermissions($_name);
-        if (!empty($_access)) {
-            $_resources[] = $_name;
-            $_resources[] = $_name . '*';
-        }
-
-        foreach ($_result as $_name) {
-            $_name = Table::RESOURCE_NAME . '/' . $_name;
-            $_access = $this->getPermissions($_name);
-            if (!empty($_access)) {
-                $_resources[] = $_name;
-            }
-        }
-
-        return $this->cleanResources($_resources);
+        return $this->resources;
     }
 
     /**

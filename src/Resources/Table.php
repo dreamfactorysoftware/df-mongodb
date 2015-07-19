@@ -63,15 +63,14 @@ class Table extends BaseDbTableResource
     /**
      * {@inheritdoc}
      */
-    public function listResources($fields = null)
+    public function getResources($only_handlers = false)
     {
+        if ($only_handlers) {
+            return [];
+        }
 //        $refresh = $this->request->queryBool('refresh');
 
         $_names = $this->service->getConnection()->getCollectionNames();
-
-        if (empty($fields)) {
-            return $this->cleanResources($_names);
-        }
 
         $_extras =
             DbUtilities::getSchemaExtrasForTables($this->service->getServiceId(), $_names, false, 'table,label,plural');
@@ -99,7 +98,7 @@ class Table extends BaseDbTableResource
             $_tables[] = ['name' => $name, 'label' => $label, 'plural' => $plural];
         }
 
-        return $this->cleanResources($_tables, 'name', $fields);
+        return $_tables;
     }
 
     /**
@@ -1259,7 +1258,7 @@ class Table extends BaseDbTableResource
                     }
 
                     if (!empty($_errors)) {
-                        $wrapper = \Config::get('df.resources_wrapper', 'resource');
+                        $wrapper = ResourcesWrapper::getWrapper();
                         $_context = array('error' => $_errors, $wrapper => $_out);
                         throw new NotFoundException('Batch Error: Not all records could be retrieved.', null, null,
                             $_context);
