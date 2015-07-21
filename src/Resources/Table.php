@@ -30,7 +30,7 @@ class Table extends BaseDbTableResource
     /**
      * @var null|MongoDb
      */
-    protected $service = null;
+    protected $parent = null;
     /**
      * @var \MongoCollection
      */
@@ -45,7 +45,7 @@ class Table extends BaseDbTableResource
      */
     public function getService()
     {
-        return $this->service;
+        return $this->parent;
     }
 
     /**
@@ -55,7 +55,7 @@ class Table extends BaseDbTableResource
      */
     public function selectTable($name)
     {
-        $_coll = $this->service->getConnection()->selectCollection($name);
+        $_coll = $this->parent->getConnection()->selectCollection($name);
 
         return $_coll;
     }
@@ -70,10 +70,10 @@ class Table extends BaseDbTableResource
         }
 //        $refresh = $this->request->queryBool('refresh');
 
-        $_names = $this->service->getConnection()->getCollectionNames();
+        $_names = $this->parent->getConnection()->getCollectionNames();
 
         $_extras =
-            DbUtilities::getSchemaExtrasForTables($this->service->getServiceId(), $_names, false, 'table,label,plural');
+            DbUtilities::getSchemaExtrasForTables($this->parent->getServiceId(), $_names, false, 'table,label,plural');
 
         $_tables = [];
         foreach ($_names as $name) {
@@ -99,6 +99,20 @@ class Table extends BaseDbTableResource
         }
 
         return $_tables;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function listAccessComponents($schema = null, $refresh = false)
+    {
+        $output = [];
+        $result = $this->parent->getConnection()->getCollectionNames();
+        foreach ($result as $name) {
+            $output[] = static::RESOURCE_NAME . '/' . $name;
+        }
+
+        return $output;
     }
 
     /**
