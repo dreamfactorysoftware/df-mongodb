@@ -27,7 +27,7 @@ class MongoDbConfig extends BaseServiceConfigModel
 
     protected $casts = ['options' => 'array', 'driver_options' => 'array'];
 
-    public static function validateConfig($config)
+    public static function validateConfig($config, $create=true)
     {
         static::checkExtensions(['mongo']);
 
