@@ -39,9 +39,9 @@ class Schema extends BaseNoSqlDbSchemaResource
      */
     public function selectTable($name)
     {
-        $_coll = $this->parent->getConnection()->selectCollection($name);
+        $coll = $this->parent->getConnection()->selectCollection($name);
 
-        return $_coll;
+        return $coll;
     }
 
     /**
@@ -54,16 +54,16 @@ class Schema extends BaseNoSqlDbSchemaResource
         }
 //        $refresh = $this->request->queryBool('refresh');
 
-        $_names = $this->parent->getConnection()->getCollectionNames();
+        $names = $this->parent->getConnection()->getCollectionNames();
 
-        $_extras =
-            DbUtilities::getSchemaExtrasForTables($this->parent->getServiceId(), $_names, false, 'table,label,plural');
+        $extras =
+            DbUtilities::getSchemaExtrasForTables($this->parent->getServiceId(), $names, false, 'table,label,plural');
 
-        $_tables = [];
-        foreach ($_names as $name) {
+        $tables = [];
+        foreach ($names as $name) {
             $label = '';
             $plural = '';
-            foreach ($_extras as $each) {
+            foreach ($extras as $each) {
                 if (0 == strcasecmp($name, ArrayUtils::get($each, 'table', ''))) {
                     $label = ArrayUtils::get($each, 'label');
                     $plural = ArrayUtils::get($each, 'plural');
@@ -79,10 +79,10 @@ class Schema extends BaseNoSqlDbSchemaResource
                 $plural = Inflector::pluralize($label);
             }
 
-            $_tables[] = ['name' => $name, 'label' => $label, 'plural' => $plural];
+            $tables[] = ['name' => $name, 'label' => $label, 'plural' => $plural];
         }
 
-        return $_tables;
+        return $tables;
     }
 
     /**
@@ -104,18 +104,18 @@ class Schema extends BaseNoSqlDbSchemaResource
      */
     public function describeTable($table, $refresh = true)
     {
-        $_name = (is_array($table)) ? ArrayUtils::get($table, 'name') : $table;
+        $name = (is_array($table)) ? ArrayUtils::get($table, 'name') : $table;
 
         try {
-            $_coll = $this->selectTable($_name);
-            $_out = array('name' => $_coll->getName());
-            $_out['indexes'] = $_coll->getIndexInfo();
-            $_out['access'] = $this->getPermissions($_name);
+            $coll = $this->selectTable($name);
+            $out = array('name' => $coll->getName());
+            $out['indexes'] = $coll->getIndexInfo();
+            $out['access'] = $this->getPermissions($name);
 
-            return $_out;
-        } catch (\Exception $_ex) {
+            return $out;
+        } catch (\Exception $ex) {
             throw new InternalServerErrorException(
-                "Failed to get table properties for table '$_name'.\n{$_ex->getMessage()}"
+                "Failed to get table properties for table '$name'.\n{$ex->getMessage()}"
             );
         }
     }
@@ -130,13 +130,13 @@ class Schema extends BaseNoSqlDbSchemaResource
         }
 
         try {
-            $_result = $this->parent->getConnection()->createCollection($table);
-            $_out = array('name' => $_result->getName());
-            $_out['indexes'] = $_result->getIndexInfo();
+            $result = $this->parent->getConnection()->createCollection($table);
+            $out = array('name' => $result->getName());
+            $out['indexes'] = $result->getIndexInfo();
 
-            return $_out;
-        } catch (\Exception $_ex) {
-            throw new InternalServerErrorException("Failed to create table '$table'.\n{$_ex->getMessage()}");
+            return $out;
+        } catch (\Exception $ex) {
+            throw new InternalServerErrorException("Failed to create table '$table'.\n{$ex->getMessage()}");
         }
     }
 
@@ -151,7 +151,7 @@ class Schema extends BaseNoSqlDbSchemaResource
 
         $this->selectTable($table);
 
-//		throw new InternalServerErrorException( "Failed to update table '$_name'." );
+//		throw new InternalServerErrorException( "Failed to update table '$name'." );
         return array('name' => $table);
     }
 
@@ -160,17 +160,17 @@ class Schema extends BaseNoSqlDbSchemaResource
      */
     public function deleteTable($table, $check_empty = false)
     {
-        $_name = (is_array($table)) ? ArrayUtils::get($table, 'name') : $table;
-        if (empty($_name)) {
+        $name = (is_array($table)) ? ArrayUtils::get($table, 'name') : $table;
+        if (empty($name)) {
             throw new BadRequestException('Table name can not be empty.');
         }
 
         try {
             $this->selectTable($table)->drop();
 
-            return array('name' => $_name);
-        } catch (\Exception $_ex) {
-            throw new InternalServerErrorException("Failed to delete table '$_name'.\n{$_ex->getMessage()}");
+            return array('name' => $name);
+        } catch (\Exception $ex) {
+            throw new InternalServerErrorException("Failed to delete table '$name'.\n{$ex->getMessage()}");
         }
     }
 }

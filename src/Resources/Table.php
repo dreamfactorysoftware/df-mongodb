@@ -1,6 +1,7 @@
 <?php
 namespace DreamFactory\Core\MongoDb\Resources;
 
+use DreamFactory\Core\Utility\ResourcesWrapper;
 use DreamFactory\Library\Utility\ArrayUtils;
 use DreamFactory\Library\Utility\Enums\Verbs;
 use DreamFactory\Library\Utility\Inflector;
@@ -55,9 +56,9 @@ class Table extends BaseDbTableResource
      */
     public function selectTable($name)
     {
-        $_coll = $this->parent->getConnection()->selectCollection($name);
+        $coll = $this->parent->getConnection()->selectCollection($name);
 
-        return $_coll;
+        return $coll;
     }
 
     /**
@@ -70,16 +71,16 @@ class Table extends BaseDbTableResource
         }
 //        $refresh = $this->request->queryBool('refresh');
 
-        $_names = $this->parent->getConnection()->getCollectionNames();
+        $names = $this->parent->getConnection()->getCollectionNames();
 
-        $_extras =
-            DbUtilities::getSchemaExtrasForTables($this->parent->getServiceId(), $_names, false, 'table,label,plural');
+        $extras =
+            DbUtilities::getSchemaExtrasForTables($this->parent->getServiceId(), $names, false, 'table,label,plural');
 
-        $_tables = [];
-        foreach ($_names as $name) {
+        $tables = [];
+        foreach ($names as $name) {
             $label = '';
             $plural = '';
-            foreach ($_extras as $each) {
+            foreach ($extras as $each) {
                 if (0 == strcasecmp($name, ArrayUtils::get($each, 'table', ''))) {
                     $label = ArrayUtils::get($each, 'label');
                     $plural = ArrayUtils::get($each, 'plural');
@@ -95,10 +96,10 @@ class Table extends BaseDbTableResource
                 $plural = Inflector::pluralize($label);
             }
 
-            $_tables[] = ['name' => $name, 'label' => $label, 'plural' => $plural];
+            $tables[] = ['name' => $name, 'label' => $label, 'plural' => $plural];
         }
 
-        return $_tables;
+        return $tables;
     }
 
     /**
@@ -121,37 +122,37 @@ class Table extends BaseDbTableResource
     public function updateRecordsByFilter($table, $record, $filter = null, $params = array(), $extras = array())
     {
         $record = DbUtilities::validateAsArray($record, null, false, 'There are no fields in the record.');
-        $_coll = $this->selectTable($table);
+        $coll = $this->selectTable($table);
 
-        $_fields = ArrayUtils::get($extras, 'fields');
-        $_ssFilters = ArrayUtils::get($extras, 'ss_filters');
+        $fields = ArrayUtils::get($extras, 'fields');
+        $ssFilters = ArrayUtils::get($extras, 'ss_filters');
 
-        $_fieldsInfo = $this->getFieldsInfo($table);
-        $_fieldArray = static::buildFieldArray($_fields);
+        $fieldsInfo = $this->getFieldsInfo($table);
+        $fieldArray = static::buildFieldArray($fields);
 
         static::removeIds($record, static::DEFAULT_ID_FIELD);
-        $_parsed = $this->parseRecord($record, $_fieldsInfo, $_ssFilters, true);
-        if (empty($_parsed)) {
+        $parsed = $this->parseRecord($record, $fieldsInfo, $ssFilters, true);
+        if (empty($parsed)) {
             throw new BadRequestException('No valid fields found in request: ' . print_r($record, true));
         }
 
         // build criteria from filter parameters
-        $_criteria = static::buildCriteriaArray($filter, $params, $_ssFilters);
+        $criteria = static::buildCriteriaArray($filter, $params, $ssFilters);
 
         try {
-            $_result = $_coll->update($_criteria, $_parsed, array('multiple' => true));
-            $_rows = static::processResult($_result);
-            if ($_rows > 0) {
-                /** @var \MongoCursor $_result */
-                $_result = $_coll->find($_criteria, $_fieldArray);
-                $_out = iterator_to_array($_result);
+            $result = $coll->update($criteria, $parsed, array('multiple' => true));
+            $rows = static::processResult($result);
+            if ($rows > 0) {
+                /** @var \MongoCursor $result */
+                $result = $coll->find($criteria, $fieldArray);
+                $out = iterator_to_array($result);
 
-                return static::cleanRecords($_out);
+                return static::cleanRecords($out);
             }
 
             return array();
-        } catch (\Exception $_ex) {
-            throw new InternalServerErrorException("Failed to update records in '$table'.\n{$_ex->getMessage()}");
+        } catch (\Exception $ex) {
+            throw new InternalServerErrorException("Failed to update records in '$table'.\n{$ex->getMessage()}");
         }
     }
 
@@ -161,46 +162,46 @@ class Table extends BaseDbTableResource
     public function patchRecordsByFilter($table, $record, $filter = null, $params = array(), $extras = array())
     {
         $record = DbUtilities::validateAsArray($record, null, false, 'There are no fields in the record.');
-        $_coll = $this->selectTable($table);
+        $coll = $this->selectTable($table);
 
-        $_fields = ArrayUtils::get($extras, 'fields');
-        $_ssFilters = ArrayUtils::get($extras, 'ss_filters');
+        $fields = ArrayUtils::get($extras, 'fields');
+        $ssFilters = ArrayUtils::get($extras, 'ss_filters');
 
-        $_fieldsInfo = $this->getFieldsInfo($table);
-        $_fieldArray = static::buildFieldArray($_fields);
+        $fieldsInfo = $this->getFieldsInfo($table);
+        $fieldArray = static::buildFieldArray($fields);
 
         static::removeIds($record, static::DEFAULT_ID_FIELD);
         if (!static::doesRecordContainModifier($record)) {
-            $_parsed = $this->parseRecord($record, $_fieldsInfo, $_ssFilters, true);
-            if (empty($_parsed)) {
+            $parsed = $this->parseRecord($record, $fieldsInfo, $ssFilters, true);
+            if (empty($parsed)) {
                 throw new BadRequestException('No valid fields found in request: ' . print_r($record, true));
             }
 
-            $_parsed = array('$set' => $_parsed);
+            $parsed = array('$set' => $parsed);
         } else {
-            $_parsed = $record;
-            if (empty($_parsed)) {
+            $parsed = $record;
+            if (empty($parsed)) {
                 throw new BadRequestException('No valid fields found in request: ' . print_r($record, true));
             }
         }
 
         // build criteria from filter parameters
-        $_criteria = static::buildCriteriaArray($filter, $params, $_ssFilters);
+        $criteria = static::buildCriteriaArray($filter, $params, $ssFilters);
 
         try {
-            $_result = $_coll->update($_criteria, $_parsed, array('multiple' => true));
-            $_rows = static::processResult($_result);
-            if ($_rows > 0) {
-                /** @var \MongoCursor $_result */
-                $_result = $_coll->find($_criteria, $_fieldArray);
-                $_out = iterator_to_array($_result);
+            $result = $coll->update($criteria, $parsed, array('multiple' => true));
+            $rows = static::processResult($result);
+            if ($rows > 0) {
+                /** @var \MongoCursor $result */
+                $result = $coll->find($criteria, $fieldArray);
+                $out = iterator_to_array($result);
 
-                return static::cleanRecords($_out);
+                return static::cleanRecords($out);
             }
 
             return array();
-        } catch (\Exception $_ex) {
-            throw new InternalServerErrorException("Failed to update records in '$table'.\n{$_ex->getMessage()}");
+        } catch (\Exception $ex) {
+            throw new InternalServerErrorException("Failed to update records in '$table'.\n{$ex->getMessage()}");
         }
     }
 
@@ -209,18 +210,18 @@ class Table extends BaseDbTableResource
      */
     public function truncateTable($table, $extras = array())
     {
-        $_coll = $this->selectTable($table);
+        $coll = $this->selectTable($table);
         try {
             // build filter string if necessary, add server-side filters if necessary
-            $_ssFilters = ArrayUtils::get($extras, 'ss_filters');
-            $_criteria = $this->buildCriteriaArray(array(), null, $_ssFilters);
-            $_coll->remove($_criteria);
+            $ssFilters = ArrayUtils::get($extras, 'ss_filters');
+            $criteria = $this->buildCriteriaArray(array(), null, $ssFilters);
+            $coll->remove($criteria);
 
             return array('success' => true);
-        } catch (RestException $_ex) {
-            throw $_ex;
-        } catch (\Exception $_ex) {
-            throw new InternalServerErrorException("Failed to delete records from '$table'.\n{$_ex->getMessage()}");
+        } catch (RestException $ex) {
+            throw $ex;
+        } catch (\Exception $ex) {
+            throw new InternalServerErrorException("Failed to delete records from '$table'.\n{$ex->getMessage()}");
         }
     }
 
@@ -233,25 +234,25 @@ class Table extends BaseDbTableResource
             throw new BadRequestException("Filter for delete request can not be empty.");
         }
 
-        $_coll = $this->selectTable($table);
+        $coll = $this->selectTable($table);
 
-        $_fields = ArrayUtils::get($extras, 'fields');
-        $_ssFilters = ArrayUtils::get($extras, 'ss_filters');
+        $fields = ArrayUtils::get($extras, 'fields');
+        $ssFilters = ArrayUtils::get($extras, 'ss_filters');
 
-        $_fieldArray = static::buildFieldArray($_fields);
+        $fieldArray = static::buildFieldArray($fields);
 
         // build criteria from filter parameters
-        $_criteria = static::buildCriteriaArray($filter, $params, $_ssFilters);
+        $criteria = static::buildCriteriaArray($filter, $params, $ssFilters);
 
         try {
-            /** @var \MongoCursor $_result */
-            $_result = $_coll->find($_criteria, $_fieldArray);
-            $_out = iterator_to_array($_result);
-            $_coll->remove($_criteria);
+            /** @var \MongoCursor $result */
+            $result = $coll->find($criteria, $fieldArray);
+            $out = iterator_to_array($result);
+            $coll->remove($criteria);
 
-            return static::cleanRecords($_out);
-        } catch (\Exception $_ex) {
-            throw new InternalServerErrorException("Failed to delete records from '$table'.\n{$_ex->getMessage()}");
+            return static::cleanRecords($out);
+        } catch (\Exception $ex) {
+            throw new InternalServerErrorException("Failed to delete records from '$table'.\n{$ex->getMessage()}");
         }
     }
 
@@ -260,48 +261,48 @@ class Table extends BaseDbTableResource
      */
     public function retrieveRecordsByFilter($table, $filter = null, $params = array(), $extras = array())
     {
-        $_coll = $this->selectTable($table);
+        $coll = $this->selectTable($table);
 
-        $_fields = ArrayUtils::get($extras, 'fields');
-        $_ssFilters = ArrayUtils::get($extras, 'ss_filters');
+        $fields = ArrayUtils::get($extras, 'fields');
+        $ssFilters = ArrayUtils::get($extras, 'ss_filters');
 
-        $_fieldArray = static::buildFieldArray($_fields);
-        $_criteria = static::buildCriteriaArray($filter, $params, $_ssFilters);
+        $fieldArray = static::buildFieldArray($fields);
+        $criteria = static::buildCriteriaArray($filter, $params, $ssFilters);
 
-        $_limit = intval(ArrayUtils::get($extras, 'limit', 0));
-        $_offset = intval(ArrayUtils::get($extras, 'offset', 0));
-        $_sort = static::buildSortArray(ArrayUtils::get($extras, 'order'));
-        $_addCount = ArrayUtils::getBool($extras, 'include_count', false);
+        $limit = intval(ArrayUtils::get($extras, 'limit', 0));
+        $offset = intval(ArrayUtils::get($extras, 'offset', 0));
+        $sort = static::buildSortArray(ArrayUtils::get($extras, 'order'));
+        $addCount = ArrayUtils::getBool($extras, 'include_count', false);
 
         try {
-            /** @var \MongoCursor $_result */
-            $_result = $_coll->find($_criteria, $_fieldArray);
-            $_count = $_result->count();
-            $_maxAllowed = static::getMaxRecordsReturnedLimit();
-            $_needMore = (($_count - $_offset) > $_maxAllowed);
-            if ($_offset) {
-                $_result = $_result->skip($_offset);
+            /** @var \MongoCursor $result */
+            $result = $coll->find($criteria, $fieldArray);
+            $count = $result->count();
+            $maxAllowed = static::getMaxRecordsReturnedLimit();
+            $needMore = (($count - $offset) > $maxAllowed);
+            if ($offset) {
+                $result = $result->skip($offset);
             }
-            if ($_sort) {
-                $_result = $_result->sort($_sort);
+            if ($sort) {
+                $result = $result->sort($sort);
             }
-            if (($_limit < 1) || ($_limit > $_maxAllowed)) {
-                $_limit = $_maxAllowed;
+            if (($limit < 1) || ($limit > $maxAllowed)) {
+                $limit = $maxAllowed;
             }
-            $_result = $_result->limit($_limit);
+            $result = $result->limit($limit);
 
-            $_out = iterator_to_array($_result);
-            $_out = static::cleanRecords($_out);
-            if ($_addCount || $_needMore) {
-                $_out['meta']['count'] = $_count;
-                if ($_needMore) {
-                    $_out['meta']['next'] = $_offset + $_limit + 1;
+            $out = iterator_to_array($result);
+            $out = static::cleanRecords($out);
+            if ($addCount || $needMore) {
+                $out['meta']['count'] = $count;
+                if ($needMore) {
+                    $out['meta']['next'] = $offset + $limit + 1;
                 }
             }
 
-            return $_out;
-        } catch (\Exception $_ex) {
-            throw new InternalServerErrorException("Failed to filter records from '$table'.\n{$_ex->getMessage()}");
+            return $out;
+        } catch (\Exception $ex) {
+            throw new InternalServerErrorException("Failed to filter records from '$table'.\n{$ex->getMessage()}");
         }
     }
 
@@ -317,10 +318,10 @@ class Table extends BaseDbTableResource
     {
         $requested_fields = static::DEFAULT_ID_FIELD; // can only be this
         $requested_types = ArrayUtils::clean($requested_types);
-        $_type = ArrayUtils::get($requested_types, 0, 'string');
-        $_type = (empty($_type)) ? 'string' : $_type;
+        $type = ArrayUtils::get($requested_types, 0, 'string');
+        $type = (empty($type)) ? 'string' : $type;
 
-        return array(array('name' => static::DEFAULT_ID_FIELD, 'type' => $_type, 'required' => false));
+        return array(array('name' => static::DEFAULT_ID_FIELD, 'type' => $type, 'required' => false));
     }
 
     /**
@@ -331,8 +332,8 @@ class Table extends BaseDbTableResource
     protected static function doesRecordContainModifier($record)
     {
         if (is_array($record)) {
-            foreach ($record as $_key => $_value) {
-                if (!empty($_key) && ('$' == $_key[0])) {
+            foreach ($record as $key => $value) {
+                if (!empty($key) && ('$' == $key[0])) {
                     return true;
                 }
             }
@@ -362,12 +363,12 @@ class Table extends BaseDbTableResource
             $include[] = static::DEFAULT_ID_FIELD;
         }
 
-        $_out = array();
+        $out = array();
         foreach ($include as $key) {
-            $_out[$key] = true;
+            $out[$key] = true;
         }
 
-        return $_out;
+        return $out;
     }
 
     /**
@@ -384,103 +385,103 @@ class Table extends BaseDbTableResource
 
         if (is_array($filter)) {
             // assume client knows correct usage of Mongo query language
-            return static::_toMongoObjects($filter);
+            return static::toMongoObjects($filter);
         }
 
-        $_search = array(' or ', ' and ', ' nor ');
-        $_replace = array(' || ', ' && ', ' NOR ');
-        $filter = trim(str_ireplace($_search, $_replace, $filter));
+        $search = array(' or ', ' and ', ' nor ');
+        $replace = array(' || ', ' && ', ' NOR ');
+        $filter = trim(str_ireplace($search, $replace, $filter));
 
         // handle logical operators first
-        $_ops = array_map('trim', explode(' || ', $filter));
-        if (count($_ops) > 1) {
-            $_parts = array();
-            foreach ($_ops as $_op) {
-                $_parts[] = static::buildFilterArray($_op, $params);
+        $ops = array_map('trim', explode(' || ', $filter));
+        if (count($ops) > 1) {
+            $parts = array();
+            foreach ($ops as $op) {
+                $parts[] = static::buildFilterArray($op, $params);
             }
 
-            return array('$or' => $_parts);
+            return array('$or' => $parts);
         }
 
-        $_ops = array_map('trim', explode(' NOR ', $filter));
-        if (count($_ops) > 1) {
-            $_parts = array();
-            foreach ($_ops as $_op) {
-                $_parts[] = static::buildFilterArray($_op, $params);
+        $ops = array_map('trim', explode(' NOR ', $filter));
+        if (count($ops) > 1) {
+            $parts = array();
+            foreach ($ops as $op) {
+                $parts[] = static::buildFilterArray($op, $params);
             }
 
-            return array('$nor' => $_parts);
+            return array('$nor' => $parts);
         }
 
-        $_ops = array_map('trim', explode(' && ', $filter));
-        if (count($_ops) > 1) {
-            $_parts = array();
-            foreach ($_ops as $_op) {
-                $_parts[] = static::buildFilterArray($_op, $params);
+        $ops = array_map('trim', explode(' && ', $filter));
+        if (count($ops) > 1) {
+            $parts = array();
+            foreach ($ops as $op) {
+                $parts[] = static::buildFilterArray($op, $params);
             }
 
-            return array('$and' => $_parts);
+            return array('$and' => $parts);
         }
 
         // handle negation operator, i.e. starts with NOT?
         if (0 == substr_compare($filter, 'not ', 0, 4, true)) {
-            $_parts = trim(substr($filter, 4));
+            $parts = trim(substr($filter, 4));
 
-            return array('$not' => $_parts);
+            return array('$not' => $parts);
         }
 
         // the rest should be comparison operators
-        $_search = array(' eq ', ' ne ', ' gte ', ' lte ', ' gt ', ' lt ', ' in ', ' nin ', ' all ', ' like ', ' <> ');
-        $_replace = array('=', '!=', '>=', '<=', '>', '<', ' IN ', ' NIN ', ' ALL ', ' LIKE ', '!=');
-        $filter = trim(str_ireplace($_search, $_replace, $filter));
+        $search = array(' eq ', ' ne ', ' gte ', ' lte ', ' gt ', ' lt ', ' in ', ' nin ', ' all ', ' like ', ' <> ');
+        $replace = array('=', '!=', '>=', '<=', '>', '<', ' IN ', ' NIN ', ' ALL ', ' LIKE ', '!=');
+        $filter = trim(str_ireplace($search, $replace, $filter));
 
         // Note: order matters, watch '='
-        $_sqlOperators = array('!=', '>=', '<=', '=', '>', '<', ' IN ', ' NIN ', ' ALL ', ' LIKE ');
-        $_mongoOperators = array('$ne', '$gte', '$lte', '$eq', '$gt', '$lt', '$in', '$nin', '$all', 'MongoRegex');
-        foreach ($_sqlOperators as $_key => $_sqlOp) {
-            $_ops = array_map('trim', explode($_sqlOp, $filter));
-            if (count($_ops) > 1) {
-                $_field = $_ops[0];
-                $_val = static::_determineValue($_ops[1], $_field, $params);
-                $_mongoOp = $_mongoOperators[$_key];
-                switch ($_mongoOp) {
+        $sqlOperators = array('!=', '>=', '<=', '=', '>', '<', ' IN ', ' NIN ', ' ALL ', ' LIKE ');
+        $mongoOperators = array('$ne', '$gte', '$lte', '$eq', '$gt', '$lt', '$in', '$nin', '$all', 'MongoRegex');
+        foreach ($sqlOperators as $key => $sqlOp) {
+            $ops = array_map('trim', explode($sqlOp, $filter));
+            if (count($ops) > 1) {
+                $field = $ops[0];
+                $val = static::determineValue($ops[1], $field, $params);
+                $mongoOp = $mongoOperators[$key];
+                switch ($mongoOp) {
                     case '$eq':
-                        return array($_field => $_val);
+                        return array($field => $val);
 
                     case '$in':
                     case '$nin':
                         // todo check for list of mongoIds
-                        $_val = array_map('trim', explode(',', trim(trim($_val, '(,)'), ',')));
-                        $_valArray = array();
-                        foreach ($_val as $_item) {
-                            $_valArray[] = static::_determineValue($_item, $_field, $params);
+                        $val = array_map('trim', explode(',', trim(trim($val, '(,)'), ',')));
+                        $valArray = array();
+                        foreach ($val as $item) {
+                            $valArray[] = static::determineValue($item, $field, $params);
                         }
 
-                        return array($_field => array($_mongoOp => $_valArray));
+                        return array($field => array($mongoOp => $valArray));
 
                     case 'MongoRegex':
 //			WHERE name LIKE "%Joe%"	(array("name" => new MongoRegex("/Joe/")));
 //			WHERE name LIKE "Joe%"	(array("name" => new MongoRegex("/^Joe/")));
 //			WHERE name LIKE "%Joe"	(array("name" => new MongoRegex("/Joe$/")));
-                        $_val = static::_determineValue($_ops[1], $_field, $params);
-                        if ('%' == $_val[strlen($_val) - 1]) {
-                            if ('%' == $_val[0]) {
-                                $_val = '/' . trim($_val, '%') . '/ ';
+                        $val = static::determineValue($ops[1], $field, $params);
+                        if ('%' == $val[strlen($val) - 1]) {
+                            if ('%' == $val[0]) {
+                                $val = '/' . trim($val, '%') . '/ ';
                             } else {
-                                $_val = '/^' . rtrim($_val, '%') . '/ ';
+                                $val = '/^' . rtrim($val, '%') . '/ ';
                             }
                         } else {
-                            if ('%' == $_val[0]) {
-                                $_val = '/' . trim($_val, '%') . '$/ ';
+                            if ('%' == $val[0]) {
+                                $val = '/' . trim($val, '%') . '$/ ';
                             } else {
-                                $_val = '/' . $_val . '/ ';
+                                $val = '/' . $val . '/ ';
                             }
                         }
 
-                        return array($_field => new \MongoRegex($_val));
+                        return array($field => new \MongoRegex($val));
 
                     default:
-                        return array($_field => array($_mongoOp => $_val));
+                        return array($field => array($mongoOp => $val));
                 }
             }
         }
@@ -495,7 +496,7 @@ class Table extends BaseDbTableResource
      *
      * @return bool|float|int|string|\MongoId
      */
-    private static function _determineValue($value, $field = null, $replacements = null)
+    private static function determineValue($value, $field = null, $replacements = null)
     {
         // process parameter replacements
         if (is_string($value) && !empty($value) && (':' == $value[0])) {
@@ -542,26 +543,26 @@ class Table extends BaseDbTableResource
         // interpret any parameter values as lookups
         $params = static::interpretRecordValues($params);
         // or as Mongo objects
-        $params = static::_toMongoObjects($params);
+        $params = static::toMongoObjects($params);
 
         // build filter array if necessary
         if (!is_array($filter)) {
 //            Session::replaceLookups( $filter );
-            $_test = json_decode($filter, true);
-            if (!is_null($_test)) {
+            $test = json_decode($filter, true);
+            if (!is_null($test)) {
                 // original filter was a json string, use it as array
-                $filter = $_test;
+                $filter = $test;
             }
         }
-        $_criteria = static::buildFilterArray($filter, $params);
+        $criteria = static::buildFilterArray($filter, $params);
 
         // add server-side filters if necessary
-        $_serverCriteria = static::buildSSFilterArray($ss_filters);
-        if (!empty($_serverCriteria)) {
-            $_criteria = (!empty($_criteria)) ? array('$and' => array($_criteria, $_serverCriteria)) : $_serverCriteria;
+        $serverCriteria = static::buildSSFilterArray($ss_filters);
+        if (!empty($serverCriteria)) {
+            $criteria = (!empty($criteria)) ? array('$and' => array($criteria, $serverCriteria)) : $serverCriteria;
         }
 
-        return $_criteria;
+        return $criteria;
     }
 
     /**
@@ -577,47 +578,47 @@ class Table extends BaseDbTableResource
         }
 
         // build the server side criteria
-        $_filters = ArrayUtils::get($ss_filters, 'filters');
-        if (empty($_filters)) {
+        $filters = ArrayUtils::get($ss_filters, 'filters');
+        if (empty($filters)) {
             return null;
         }
 
-        $_criteria = array();
-        $_combiner = ArrayUtils::get($ss_filters, 'filter_op', 'and');
-        foreach ($_filters as $_filter) {
-            $_name = ArrayUtils::get($_filter, 'name');
-            $_op = ArrayUtils::get($_filter, 'operator');
-            if (empty($_name) || empty($_op)) {
+        $criteria = array();
+        $combiner = ArrayUtils::get($ss_filters, 'filter_op', 'and');
+        foreach ($filters as $filter) {
+            $name = ArrayUtils::get($filter, 'name');
+            $op = ArrayUtils::get($filter, 'operator');
+            if (empty($name) || empty($op)) {
                 // log and bail
                 throw new InternalServerErrorException('Invalid server-side filter configuration detected.');
             }
 
-            $_value = ArrayUtils::get($_filter, 'value');
-            $_value = static::interpretFilterValue($_value);
+            $value = ArrayUtils::get($filter, 'value');
+            $value = static::interpretFilterValue($value);
 
-            $_criteria[] = static::buildFilterArray("$_name $_op $_value");
+            $criteria[] = static::buildFilterArray("$name $op $value");
         }
 
-        if (1 == count($_criteria)) {
-            return $_criteria[0];
+        if (1 == count($criteria)) {
+            return $criteria[0];
         }
 
-        switch (strtoupper($_combiner)) {
+        switch (strtoupper($combiner)) {
             case 'AND':
-                $_criteria = array('$and' => $_criteria);
+                $criteria = array('$and' => $criteria);
                 break;
             case 'OR':
-                $_criteria = array('$or' => $_criteria);
+                $criteria = array('$or' => $criteria);
                 break;
             case 'NOR':
-                $_criteria = array('$nor' => $_criteria);
+                $criteria = array('$nor' => $criteria);
                 break;
             default:
                 // log and bail
                 throw new InternalServerErrorException('Invalid server-side filter configuration detected.');
         }
 
-        return $_criteria;
+        return $criteria;
     }
 
     /**
@@ -634,35 +635,35 @@ class Table extends BaseDbTableResource
         if (!is_array($sort)) {
             $sort = array_map('trim', explode(',', trim($sort, ',')));
         }
-        $_out = array();
-        foreach ($sort as $_combo) {
-            if (!is_array($_combo)) {
-                $_combo = array_map('trim', explode(' ', trim($_combo, ' ')));
+        $out = array();
+        foreach ($sort as $combo) {
+            if (!is_array($combo)) {
+                $combo = array_map('trim', explode(' ', trim($combo, ' ')));
             }
-            $_dir = 1;
-            $_field = '';
-            switch (count($_combo)) {
+            $dir = 1;
+            $field = '';
+            switch (count($combo)) {
                 case 1:
-                    $_field = $_combo[0];
+                    $field = $combo[0];
                     break;
                 case 2:
-                    $_field = $_combo[0];
-                    switch ($_combo[1]) {
+                    $field = $combo[0];
+                    switch ($combo[1]) {
                         case -1:
                         case 'desc':
                         case 'DESC':
                         case 'dsc':
                         case 'DSC':
-                            $_dir = -1;
+                            $dir = -1;
                             break;
                     }
             }
-            if (!empty($_field)) {
-                $_out[$_field] = $_dir;
+            if (!empty($field)) {
+                $out[$field] = $dir;
             }
         }
 
-        return $_out;
+        return $out;
     }
 
     /**
@@ -674,9 +675,9 @@ class Table extends BaseDbTableResource
      */
     protected static function cleanRecord($record = array(), $include = '*', $id_field = null)
     {
-        $_out = parent::cleanRecord($record, $include, $id_field);
+        $out = parent::cleanRecord($record, $include, $id_field);
 
-        return static::_fromMongoObjects($_out);
+        return static::fromMongoObjects($out);
     }
 
     /**
@@ -684,19 +685,19 @@ class Table extends BaseDbTableResource
      *
      * @return array|string
      */
-    protected static function _fromMongoObjects(array $record)
+    protected static function fromMongoObjects(array $record)
     {
         if (!empty($record)) {
-            foreach ($record as &$_data) {
-                if (is_object($_data)) {
-                    if ($_data instanceof \MongoId) {
-                        $_data = $_data->__toString();
-                    } elseif ($_data instanceof \MongoDate) {
-//                        $_data = $data->__toString();
-                        $_data = array('$date' => date(DATE_ISO8601, $_data->sec));
-                    } elseif ($_data instanceof \MongoBinData) {
-                        $_data = (string)$_data;
-                    } elseif ($_data instanceof \MongoDBRef) {
+            foreach ($record as &$data) {
+                if (is_object($data)) {
+                    if ($data instanceof \MongoId) {
+                        $data = $data->__toString();
+                    } elseif ($data instanceof \MongoDate) {
+//                        $data = $data->__toString();
+                        $data = array('$date' => date(DATE_ISO8601, $data->sec));
+                    } elseif ($data instanceof \MongoBinData) {
+                        $data = (string)$data;
+                    } elseif ($data instanceof \MongoDBRef) {
                     }
                 }
             }
@@ -710,30 +711,30 @@ class Table extends BaseDbTableResource
      *
      * @return array
      */
-    protected static function _toMongoObjects($record)
+    protected static function toMongoObjects($record)
     {
         if (!empty($record)) {
-            foreach ($record as $_key => $_data) {
-                if (!is_object($_data)) {
-                    if (is_string($_data) && (static::DEFAULT_ID_FIELD == $_key)) {
-                        $record[$_key] = static::idToMongoId($_data);
-                    } elseif (is_array($_data)) {
-                        if (1 === count($_data)) {
+            foreach ($record as $key => $data) {
+                if (!is_object($data)) {
+                    if (is_string($data) && (static::DEFAULT_ID_FIELD == $key)) {
+                        $record[$key] = static::idToMongoId($data);
+                    } elseif (is_array($data)) {
+                        if (1 === count($data)) {
                             // using typed definition, i.e. {"$date" : "2014-08-02T08:40:12.569Z" }
-                            if (array_key_exists('$date', $_data)) {
-                                $_temp = $_data['$date'];
-                                if (empty($_temp)) {
+                            if (array_key_exists('$date', $data)) {
+                                $temp = $data['$date'];
+                                if (empty($temp)) {
                                     // empty means create with current time
-                                    $record[$_key] = new \MongoDate();
-                                } elseif (is_string($_temp)) {
-                                    $record[$_key] = new \MongoDate(strtotime($_temp));
-                                } elseif (is_int($_temp)) {
-                                    $record[$_key] = new \MongoDate($_temp);
+                                    $record[$key] = new \MongoDate();
+                                } elseif (is_string($temp)) {
+                                    $record[$key] = new \MongoDate(strtotime($temp));
+                                } elseif (is_int($temp)) {
+                                    $record[$key] = new \MongoDate($temp);
                                 }
-                            } elseif (isset($_data['$id'])) {
-                                $record[$_key] = static::idToMongoId($_data['$id']);
+                            } elseif (isset($data['$id'])) {
+                                $record[$key] = static::idToMongoId($data['$id']);
                             } else {
-                                $record[$_key] = static::_toMongoObjects($_data);
+                                $record[$key] = static::toMongoObjects($data);
                             }
                         }
                     }
@@ -766,8 +767,8 @@ class Table extends BaseDbTableResource
      */
     protected static function mongoIdsToIds($records)
     {
-        foreach ($records as $key => $_record) {
-            $records[$key] = static::mongoIdToId($_record);
+        foreach ($records as $key => $record) {
+            $records[$key] = static::mongoIdToId($record);
         }
 
         return $records;
@@ -789,9 +790,9 @@ class Table extends BaseDbTableResource
         if (is_string($value)) {
             if ((24 == strlen($value))) {
                 try {
-                    $_temp = new \MongoId($value);
-                    $value = $_temp;
-                } catch (\Exception $_ex) {
+                    $temp = new \MongoId($value);
+                    $value = $temp;
+                } catch (\Exception $ex) {
                     // obviously not a Mongo created Id, let it be
                 }
             }
@@ -812,8 +813,8 @@ class Table extends BaseDbTableResource
             $ids = array_map('trim', explode(',', trim($ids, ',')));
         }
 
-        foreach ($ids as &$_id) {
-            $_id = static::idToMongoId($_id);
+        foreach ($ids as &$id) {
+            $id = static::idToMongoId($id);
         }
 
         return $ids;
@@ -842,58 +843,58 @@ class Table extends BaseDbTableResource
                 break;
         }
 
-        $_parsed = (empty($fields_info)) ? $record : array();
+        $parsed = (empty($fields_info)) ? $record : array();
         if (!empty($fields_info)) {
-            $_keys = array_keys($record);
-            $_values = array_values($record);
-            foreach ($fields_info as $_fieldInfo) {
-                $_name = ArrayUtils::get($_fieldInfo, 'name', '');
-                $_type = ArrayUtils::get($_fieldInfo, 'type');
-                $_pos = array_search($_name, $_keys);
-                if (false !== $_pos) {
-                    $_fieldVal = ArrayUtils::get($_values, $_pos);
+            $keys = array_keys($record);
+            $values = array_values($record);
+            foreach ($fields_info as $fieldInfo) {
+                $name = ArrayUtils::get($fieldInfo, 'name', '');
+                $type = ArrayUtils::get($fieldInfo, 'type');
+                $pos = array_search($name, $keys);
+                if (false !== $pos) {
+                    $fieldVal = ArrayUtils::get($values, $pos);
                     // due to conversion from XML to array, null or empty xml elements have the array value of an empty array
-                    if (is_array($_fieldVal) && empty($_fieldVal)) {
-                        $_fieldVal = null;
+                    if (is_array($fieldVal) && empty($fieldVal)) {
+                        $fieldVal = null;
                     }
 
                     /** validations **/
 
-                    $_validations = ArrayUtils::get($_fieldInfo, 'validation');
+                    $validations = ArrayUtils::get($fieldInfo, 'validation');
 
-                    if (!static::validateFieldValue($_name, $_fieldVal, $_validations, $for_update, $_fieldInfo)) {
-                        unset($_keys[$_pos]);
-                        unset($_values[$_pos]);
+                    if (!static::validateFieldValue($name, $fieldVal, $validations, $for_update, $fieldInfo)) {
+                        unset($keys[$pos]);
+                        unset($values[$pos]);
                         continue;
                     }
 
-                    $_parsed[$_name] = $_fieldVal;
-                    unset($_keys[$_pos]);
-                    unset($_values[$_pos]);
+                    $parsed[$name] = $fieldVal;
+                    unset($keys[$pos]);
+                    unset($values[$pos]);
                 }
 
                 // add or override for specific fields
-                switch ($_type) {
+                switch ($type) {
                     case 'timestamp_on_create':
                         if (!$for_update) {
-                            $_parsed[$_name] = new \MongoDate();
+                            $parsed[$name] = new \MongoDate();
                         }
                         break;
                     case 'timestamp_on_update':
-                        $_parsed[$_name] = new \MongoDate();
+                        $parsed[$name] = new \MongoDate();
                         break;
                     case 'user_id_on_create':
                         if (!$for_update) {
                             $userId = 1; //Session::getCurrentUserId();
                             if (isset($userId)) {
-                                $_parsed[$_name] = $userId;
+                                $parsed[$name] = $userId;
                             }
                         }
                         break;
                     case 'user_id_on_update':
                         $userId = 1; //Session::getCurrentUserId();
                         if (isset($userId)) {
-                            $_parsed[$_name] = $userId;
+                            $parsed[$name] = $userId;
                         }
                         break;
                 }
@@ -901,11 +902,11 @@ class Table extends BaseDbTableResource
         }
 
         if (!empty($filter_info)) {
-            $this->validateRecord($_parsed, $filter_info, $for_update, $old_record);
+            $this->validateRecord($parsed, $filter_info, $for_update, $old_record);
         }
 
         // convert to native format
-        return static::_toMongoObjects($_parsed);
+        return static::toMongoObjects($parsed);
     }
 
     /**
@@ -920,9 +921,9 @@ class Table extends BaseDbTableResource
             throw new InternalServerErrorException('MongoDb did not return an array, check configuration.');
         }
 
-        $_errorMsg = ArrayUtils::get($result, 'err');
-        if (!empty($_errorMsg)) {
-            throw new InternalServerErrorException('MongoDb error:' . $_errorMsg);
+        $errorMsg = ArrayUtils::get($result, 'err');
+        if (!empty($errorMsg)) {
+            throw new InternalServerErrorException('MongoDb error:' . $errorMsg);
         }
 
         return ArrayUtils::get($result, 'n');
@@ -949,127 +950,127 @@ class Table extends BaseDbTableResource
         $continue = false,
         $single = false
     ){
-        $_ssFilters = ArrayUtils::get($extras, 'ss_filters');
-        $_fields = ArrayUtils::get($extras, 'fields');
-        $_fieldsInfo = ArrayUtils::get($extras, 'fields_info');
-        $_requireMore = ArrayUtils::get($extras, 'require_more');
-        $_updates = ArrayUtils::get($extras, 'updates');
+        $ssFilters = ArrayUtils::get($extras, 'ss_filters');
+        $fields = ArrayUtils::get($extras, 'fields');
+        $fieldsInfo = ArrayUtils::get($extras, 'fields_info');
+        $requireMore = ArrayUtils::get($extras, 'require_more');
+        $updates = ArrayUtils::get($extras, 'updates');
 
         // convert to native format
         $id = static::idToMongoId($id);
 
-        $_fieldArray = ($rollback) ? null : static::buildFieldArray($_fields);
+        $fieldArray = ($rollback) ? null : static::buildFieldArray($fields);
 
-        $_out = array();
+        $out = array();
         switch ($this->getAction()) {
             case Verbs::POST:
-                $_parsed = $this->parseRecord($record, $_fieldsInfo, $_ssFilters);
-                if (empty($_parsed)) {
+                $parsed = $this->parseRecord($record, $fieldsInfo, $ssFilters);
+                if (empty($parsed)) {
                     throw new BadRequestException('No valid fields were found in record.');
                 }
 
                 if (!$continue && !$rollback && !$single) {
-                    return parent::addToTransaction($_parsed, $id);
+                    return parent::addToTransaction($parsed, $id);
                 }
 
-                $_result = $this->collection->insert($_parsed);
-                static::processResult($_result);
+                $result = $this->collection->insert($parsed);
+                static::processResult($result);
 
-                $_out = static::cleanRecord($_parsed, $_fields, static::DEFAULT_ID_FIELD);
+                $out = static::cleanRecord($parsed, $fields, static::DEFAULT_ID_FIELD);
 
                 if ($rollback) {
-                    $this->addToRollback(static::recordAsId($_parsed, static::DEFAULT_ID_FIELD));
+                    $this->addToRollback(static::recordAsId($parsed, static::DEFAULT_ID_FIELD));
                 }
                 break;
 
             case Verbs::PUT:
-                if (!empty($_updates)) {
-                    $_parsed = $this->parseRecord($_updates, $_fieldsInfo, $_ssFilters, true);
-                    $_updates = $_parsed;
+                if (!empty($updates)) {
+                    $parsed = $this->parseRecord($updates, $fieldsInfo, $ssFilters, true);
+                    $updates = $parsed;
                 } else {
-                    $_parsed = $this->parseRecord($record, $_fieldsInfo, $_ssFilters, true);
+                    $parsed = $this->parseRecord($record, $fieldsInfo, $ssFilters, true);
                 }
-                if (empty($_parsed)) {
+                if (empty($parsed)) {
                     throw new BadRequestException('No valid fields were found in record.');
                 }
 
                 // only update/patch by ids can use batching
-                if (!$continue && !$rollback && !$single && !empty($_updates)) {
+                if (!$continue && !$rollback && !$single && !empty($updates)) {
                     return parent::addToTransaction(null, $id);
                 }
 
-                $_options = array('new' => !$rollback);
-                if (empty($_updates)) {
-                    $_out = static::cleanRecord($record, $_fields, static::DEFAULT_ID_FIELD);
-                    static::removeIds($_parsed, static::DEFAULT_ID_FIELD);
-                    $_updates = $_parsed;
+                $options = array('new' => !$rollback);
+                if (empty($updates)) {
+                    $out = static::cleanRecord($record, $fields, static::DEFAULT_ID_FIELD);
+                    static::removeIds($parsed, static::DEFAULT_ID_FIELD);
+                    $updates = $parsed;
                 } else {
-                    $record = $_updates;
+                    $record = $updates;
                     $record[static::DEFAULT_ID_FIELD] = $id;
-                    $_out = static::cleanRecord($record, $_fields, static::DEFAULT_ID_FIELD);
+                    $out = static::cleanRecord($record, $fields, static::DEFAULT_ID_FIELD);
                 }
 
                 // simple update overwrite existing record
-                $_filter = array(static::DEFAULT_ID_FIELD => $id);
-                $_criteria = $this->buildCriteriaArray($_filter, null, $_ssFilters);
-                $_result = $this->collection->findAndModify($_criteria, $_updates, $_fieldArray, $_options);
-                if (empty($_result)) {
+                $filter = array(static::DEFAULT_ID_FIELD => $id);
+                $criteria = $this->buildCriteriaArray($filter, null, $ssFilters);
+                $result = $this->collection->findAndModify($criteria, $updates, $fieldArray, $options);
+                if (empty($result)) {
                     throw new NotFoundException("Record with id '$id' not found.");
                 }
 
                 if ($rollback) {
-                    $this->addToRollback($_result);
+                    $this->addToRollback($result);
                 } else {
-                    $_out = static::_fromMongoObjects($_result);
+                    $out = static::fromMongoObjects($result);
                 }
                 break;
 
             case Verbs::MERGE:
             case Verbs::PATCH:
-                if (!empty($_updates)) {
-                    $_parsed = $this->parseRecord($_updates, $_fieldsInfo, $_ssFilters, true);
-                    $_updates = $_parsed;
+                if (!empty($updates)) {
+                    $parsed = $this->parseRecord($updates, $fieldsInfo, $ssFilters, true);
+                    $updates = $parsed;
                 } else {
-                    $_parsed = $this->parseRecord($record, $_fieldsInfo, $_ssFilters, true);
+                    $parsed = $this->parseRecord($record, $fieldsInfo, $ssFilters, true);
                 }
-                if (empty($_parsed)) {
+                if (empty($parsed)) {
                     throw new BadRequestException('No valid fields were found in record.');
                 }
 
                 // only update/patch by ids can use batching
-                if (!$continue && !$rollback && !$single && !empty($_updates)) {
+                if (!$continue && !$rollback && !$single && !empty($updates)) {
                     return parent::addToTransaction(null, $id);
                 }
 
-                $_options = array('new' => !$rollback);
-                if (empty($_updates)) {
-                    static::removeIds($_parsed, static::DEFAULT_ID_FIELD);
-                    $_updates = $_parsed;
+                $options = array('new' => !$rollback);
+                if (empty($updates)) {
+                    static::removeIds($parsed, static::DEFAULT_ID_FIELD);
+                    $updates = $parsed;
                 }
 
-                $_updates = array('$set' => $_updates);
+                $updates = array('$set' => $updates);
 
                 // simple merge with existing record
-                $_filter = array(static::DEFAULT_ID_FIELD => $id);
-                $_criteria = $this->buildCriteriaArray($_filter, null, $_ssFilters);
-                $_result = $this->collection->findAndModify($_criteria, $_updates, $_fieldArray, $_options);
-                if (empty($_result)) {
+                $filter = array(static::DEFAULT_ID_FIELD => $id);
+                $criteria = $this->buildCriteriaArray($filter, null, $ssFilters);
+                $result = $this->collection->findAndModify($criteria, $updates, $fieldArray, $options);
+                if (empty($result)) {
                     throw new NotFoundException("Record with id '$id' not found.");
                 }
 
                 if ($rollback) {
-                    $this->addToRollback($_result);
+                    $this->addToRollback($result);
 
                     // need to retrieve the full record here
-                    if ($_requireMore) {
-                        /** @var \MongoCursor $_result */
-                        $_result = $this->collection->findOne($_criteria, $_fieldArray);
+                    if ($requireMore) {
+                        /** @var \MongoCursor $result */
+                        $result = $this->collection->findOne($criteria, $fieldArray);
                     } else {
-                        $_result = array(static::DEFAULT_ID_FIELD => $id);
+                        $result = array(static::DEFAULT_ID_FIELD => $id);
                     }
                 }
 
-                $_out = static::_fromMongoObjects($_result);
+                $out = static::fromMongoObjects($result);
                 break;
 
             case Verbs::DELETE:
@@ -1077,21 +1078,21 @@ class Table extends BaseDbTableResource
                     return parent::addToTransaction(null, $id);
                 }
 
-                $_options = array('remove' => true);
+                $options = array('remove' => true);
 
                 // simple delete existing record
-                $_filter = array(static::DEFAULT_ID_FIELD => $id);
-                $_criteria = $this->buildCriteriaArray($_filter, null, $_ssFilters);
-                $_result = $this->collection->findAndModify($_criteria, null, $_fieldArray, $_options);
-                if (empty($_result)) {
+                $filter = array(static::DEFAULT_ID_FIELD => $id);
+                $criteria = $this->buildCriteriaArray($filter, null, $ssFilters);
+                $result = $this->collection->findAndModify($criteria, null, $fieldArray, $options);
+                if (empty($result)) {
                     throw new NotFoundException("Record with id '$id' not found.");
                 }
 
                 if ($rollback) {
-                    $this->addToRollback($_result);
-                    $_out = static::cleanRecord($record, $_fields, static::DEFAULT_ID_FIELD);
+                    $this->addToRollback($result);
+                    $out = static::cleanRecord($record, $fields, static::DEFAULT_ID_FIELD);
                 } else {
-                    $_out = static::_fromMongoObjects($_result);
+                    $out = static::fromMongoObjects($result);
                 }
                 break;
 
@@ -1100,18 +1101,18 @@ class Table extends BaseDbTableResource
                     return parent::addToTransaction(null, $id);
                 }
 
-                $_filter = array(static::DEFAULT_ID_FIELD => $id);
-                $_criteria = $this->buildCriteriaArray($_filter, null, $_ssFilters);
-                $_result = $this->collection->findOne($_criteria, $_fieldArray);
-                if (empty($_result)) {
+                $filter = array(static::DEFAULT_ID_FIELD => $id);
+                $criteria = $this->buildCriteriaArray($filter, null, $ssFilters);
+                $result = $this->collection->findOne($criteria, $fieldArray);
+                if (empty($result)) {
                     throw new NotFoundException("Record with id '$id' not found.");
                 }
 
-                $_out = static::_fromMongoObjects($_result);
+                $out = static::fromMongoObjects($result);
                 break;
         }
 
-        return $_out;
+        return $out;
     }
 
     /**
@@ -1119,177 +1120,177 @@ class Table extends BaseDbTableResource
      */
     protected function commitTransaction($extras = null)
     {
-        if (empty($this->_batchRecords) && empty($this->_batchIds)) {
+        if (empty($this->batchRecords) && empty($this->batchIds)) {
             return null;
         }
 
-        $_updates = ArrayUtils::get($extras, 'updates');
-        $_ssFilters = ArrayUtils::get($extras, 'ss_filters');
-        $_fields = ArrayUtils::get($extras, 'fields');
-        $_requireMore = ArrayUtils::get($extras, 'require_more');
+        $updates = ArrayUtils::get($extras, 'updates');
+        $ssFilters = ArrayUtils::get($extras, 'ss_filters');
+        $fields = ArrayUtils::get($extras, 'fields');
+        $requireMore = ArrayUtils::get($extras, 'require_more');
 
-        $_out = array();
+        $out = array();
         switch ($this->getAction()) {
             case Verbs::POST:
-                $_result = $this->collection->batchInsert($this->_batchRecords, array('continueOnError' => false));
-                static::processResult($_result);
+                $result = $this->collection->batchInsert($this->batchRecords, array('continueOnError' => false));
+                static::processResult($result);
 
-                $_out = static::cleanRecords($this->_batchRecords, $_fields);
+                $out = static::cleanRecords($this->batchRecords, $fields);
                 break;
             case Verbs::PUT:
-                if (empty($_updates)) {
+                if (empty($updates)) {
                     throw new BadRequestException('Batch operation not supported for update by records.');
                 }
 
-                $_filter = array(static::DEFAULT_ID_FIELD => array('$in' => $this->_batchIds));
-                $_criteria = static::buildCriteriaArray($_filter, null, $_ssFilters);
+                $filter = array(static::DEFAULT_ID_FIELD => array('$in' => $this->batchIds));
+                $criteria = static::buildCriteriaArray($filter, null, $ssFilters);
 
-                $_result = $this->collection->update($_criteria, $_updates, null, array('multiple' => true));
-                $_rows = static::processResult($_result);
-                if (0 === $_rows) {
+                $result = $this->collection->update($criteria, $updates, null, array('multiple' => true));
+                $rows = static::processResult($result);
+                if (0 === $rows) {
                     throw new NotFoundException('No requested records were found to update.');
                 }
 
-                if (count($this->_batchIds) !== $_rows) {
+                if (count($this->batchIds) !== $rows) {
                     throw new BadRequestException('Batch Error: Not all requested records were found to update.');
                 }
 
-                if ($_requireMore) {
-                    $_fieldArray = static::buildFieldArray($_fields);
-                    /** @var \MongoCursor $_result */
-                    $_result = $this->collection->find($_criteria, $_fieldArray);
-                    $_out = static::cleanRecords(iterator_to_array($_result));
+                if ($requireMore) {
+                    $fieldArray = static::buildFieldArray($fields);
+                    /** @var \MongoCursor $result */
+                    $result = $this->collection->find($criteria, $fieldArray);
+                    $out = static::cleanRecords(iterator_to_array($result));
                 } else {
-                    $_out = static::idsAsRecords(static::mongoIdsToIds($this->_batchIds), static::DEFAULT_ID_FIELD);
+                    $out = static::idsAsRecords(static::mongoIdsToIds($this->batchIds), static::DEFAULT_ID_FIELD);
                 }
                 break;
 
             case Verbs::MERGE:
             case Verbs::PATCH:
-                if (empty($_updates)) {
+                if (empty($updates)) {
                     throw new BadRequestException('Batch operation not supported for patch by records.');
                 }
 
-                $_updates = array('$set' => $_updates);
+                $updates = array('$set' => $updates);
 
-                $_filter = array(static::DEFAULT_ID_FIELD => array('$in' => $this->_batchIds));
-                $_criteria = static::buildCriteriaArray($_filter, null, $_ssFilters);
+                $filter = array(static::DEFAULT_ID_FIELD => array('$in' => $this->batchIds));
+                $criteria = static::buildCriteriaArray($filter, null, $ssFilters);
 
-                $_result = $this->collection->update($_criteria, $_updates, array('multiple' => true));
-                $_rows = static::processResult($_result);
-                if (0 === $_rows) {
+                $result = $this->collection->update($criteria, $updates, array('multiple' => true));
+                $rows = static::processResult($result);
+                if (0 === $rows) {
                     throw new NotFoundException('No requested records were found to patch.');
                 }
 
-                if (count($this->_batchIds) !== $_rows) {
+                if (count($this->batchIds) !== $rows) {
                     throw new BadRequestException('Batch Error: Not all requested records were found to patch.');
                 }
 
-                if ($_requireMore) {
-                    $_fieldArray = static::buildFieldArray($_fields);
-                    /** @var \MongoCursor $_result */
-                    $_result = $this->collection->find($_criteria, $_fieldArray);
-                    $_out = static::cleanRecords(iterator_to_array($_result));
+                if ($requireMore) {
+                    $fieldArray = static::buildFieldArray($fields);
+                    /** @var \MongoCursor $result */
+                    $result = $this->collection->find($criteria, $fieldArray);
+                    $out = static::cleanRecords(iterator_to_array($result));
                 } else {
-                    $_out = static::idsAsRecords(static::mongoIdsToIds($this->_batchIds), static::DEFAULT_ID_FIELD);
+                    $out = static::idsAsRecords(static::mongoIdsToIds($this->batchIds), static::DEFAULT_ID_FIELD);
                 }
                 break;
 
             case Verbs::DELETE:
-                $_filter = array(static::DEFAULT_ID_FIELD => array('$in' => $this->_batchIds));
-                $_criteria = static::buildCriteriaArray($_filter, null, $_ssFilters);
+                $filter = array(static::DEFAULT_ID_FIELD => array('$in' => $this->batchIds));
+                $criteria = static::buildCriteriaArray($filter, null, $ssFilters);
 
-                if ($_requireMore) {
-                    $_fieldArray = static::buildFieldArray($_fields);
-                    /** @var \MongoCursor $_result */
-                    $_result = $this->collection->find($_criteria, $_fieldArray);
-                    $_result = static::cleanRecords(iterator_to_array($_result));
-                    if (empty($_result)) {
+                if ($requireMore) {
+                    $fieldArray = static::buildFieldArray($fields);
+                    /** @var \MongoCursor $result */
+                    $result = $this->collection->find($criteria, $fieldArray);
+                    $result = static::cleanRecords(iterator_to_array($result));
+                    if (empty($result)) {
                         throw new NotFoundException('No records were found using the given identifiers.');
                     }
 
-                    if (count($this->_batchIds) !== count($_result)) {
-                        $_errors = array();
-                        foreach ($this->_batchIds as $_index => $_id) {
-                            $_found = false;
-                            foreach ($_result as $_record) {
-                                if ($_id == ArrayUtils::get($_record, static::DEFAULT_ID_FIELD)) {
-                                    $_out[$_index] = $_record;
-                                    $_found = true;
+                    if (count($this->batchIds) !== count($result)) {
+                        $errors = array();
+                        foreach ($this->batchIds as $index => $id) {
+                            $found = false;
+                            foreach ($result as $record) {
+                                if ($id == ArrayUtils::get($record, static::DEFAULT_ID_FIELD)) {
+                                    $out[$index] = $record;
+                                    $found = true;
                                     continue;
                                 }
                             }
-                            if (!$_found) {
-                                $_errors[] = $_index;
-                                $_out[$_index] = "Record with identifier '" . print_r($_id, true) . "' not found.";
+                            if (!$found) {
+                                $errors[] = $index;
+                                $out[$index] = "Record with identifier '" . print_r($id, true) . "' not found.";
                             }
                         }
                     } else {
-                        $_out = $_result;
+                        $out = $result;
                     }
                 } else {
-                    $_out = static::idsAsRecords(static::mongoIdsToIds($this->_batchIds), static::DEFAULT_ID_FIELD);
+                    $out = static::idsAsRecords(static::mongoIdsToIds($this->batchIds), static::DEFAULT_ID_FIELD);
                 }
 
-                $_result = $this->collection->remove($_criteria);
-                $_rows = static::processResult($_result);
-                if (0 === $_rows) {
+                $result = $this->collection->remove($criteria);
+                $rows = static::processResult($result);
+                if (0 === $rows) {
                     throw new NotFoundException('No records were found using the given identifiers.');
                 }
 
-                if (count($this->_batchIds) !== $_rows) {
+                if (count($this->batchIds) !== $rows) {
                     throw new BadRequestException('Batch Error: Not all requested records were deleted.');
                 }
                 break;
 
             case Verbs::GET:
-                $_filter = array(static::DEFAULT_ID_FIELD => array('$in' => $this->_batchIds));
-                $_criteria = static::buildCriteriaArray($_filter, null, $_ssFilters);
-                $_fieldArray = static::buildFieldArray($_fields);
+                $filter = array(static::DEFAULT_ID_FIELD => array('$in' => $this->batchIds));
+                $criteria = static::buildCriteriaArray($filter, null, $ssFilters);
+                $fieldArray = static::buildFieldArray($fields);
 
-                /** @var \MongoCursor $_result */
-                $_result = $this->collection->find($_criteria, $_fieldArray);
-                $_result = static::cleanRecords(iterator_to_array($_result));
-                if (empty($_result)) {
+                /** @var \MongoCursor $result */
+                $result = $this->collection->find($criteria, $fieldArray);
+                $result = static::cleanRecords(iterator_to_array($result));
+                if (empty($result)) {
                     throw new NotFoundException('No records were found using the given identifiers.');
                 }
 
-                if (count($this->_batchIds) !== count($_result)) {
-                    $_errors = array();
-                    foreach ($this->_batchIds as $_index => $_id) {
-                        $_found = false;
-                        foreach ($_result as $_record) {
-                            if ($_id == ArrayUtils::get($_record, static::DEFAULT_ID_FIELD)) {
-                                $_out[$_index] = $_record;
-                                $_found = true;
+                if (count($this->batchIds) !== count($result)) {
+                    $errors = array();
+                    foreach ($this->batchIds as $index => $id) {
+                        $found = false;
+                        foreach ($result as $record) {
+                            if ($id == ArrayUtils::get($record, static::DEFAULT_ID_FIELD)) {
+                                $out[$index] = $record;
+                                $found = true;
                                 continue;
                             }
                         }
-                        if (!$_found) {
-                            $_errors[] = $_index;
-                            $_out[$_index] = "Record with identifier '" . print_r($_id, true) . "' not found.";
+                        if (!$found) {
+                            $errors[] = $index;
+                            $out[$index] = "Record with identifier '" . print_r($id, true) . "' not found.";
                         }
                     }
 
-                    if (!empty($_errors)) {
+                    if (!empty($errors)) {
                         $wrapper = ResourcesWrapper::getWrapper();
-                        $_context = array('error' => $_errors, $wrapper => $_out);
+                        $context = array('error' => $errors, $wrapper => $out);
                         throw new NotFoundException('Batch Error: Not all records could be retrieved.', null, null,
-                            $_context);
+                            $context);
                     }
                 }
 
-                $_out = $_result;
+                $out = $result;
                 break;
 
             default:
                 break;
         }
 
-        $this->_batchIds = array();
-        $this->_batchRecords = array();
+        $this->batchIds = array();
+        $this->batchRecords = array();
 
-        return $_out;
+        return $out;
     }
 
     /**
@@ -1297,20 +1298,20 @@ class Table extends BaseDbTableResource
      */
     protected function rollbackTransaction()
     {
-        if (!empty($this->_rollbackRecords)) {
+        if (!empty($this->rollbackRecords)) {
             switch ($this->getAction()) {
                 case Verbs::POST:
                     // should be ids here from creation
-                    $_filter = array(static::DEFAULT_ID_FIELD => array('$in' => $this->_rollbackRecords));
-                    $this->collection->remove($_filter);
+                    $filter = array(static::DEFAULT_ID_FIELD => array('$in' => $this->rollbackRecords));
+                    $this->collection->remove($filter);
                     break;
 
                 case Verbs::PUT:
                 case Verbs::PATCH:
                 case Verbs::MERGE:
                 case Verbs::DELETE:
-                    foreach ($this->_rollbackRecords as $_record) {
-                        $this->collection->save($_record);
+                    foreach ($this->rollbackRecords as $record) {
+                        $this->collection->save($record);
                     }
                     break;
 
@@ -1318,7 +1319,7 @@ class Table extends BaseDbTableResource
                     break;
             }
 
-            $this->_rollbackRecords = array();
+            $this->rollbackRecords = array();
         }
 
         return true;

@@ -112,8 +112,8 @@ class MongoDb extends BaseNoSqlDbService
         if (!isset($db) && (null === $db = ArrayUtils::get($options, 'db', null, true))) {
             //  Attempt to find db in connection string
             $db = strstr(substr($dsn, static::DSN_PREFIX_LENGTH), '/');
-            if (false !== $_pos = strpos($db, '?')) {
-                $db = substr($db, 0, $_pos);
+            if (false !== $pos = strpos($db, '?')) {
+                $db = substr($db, 0, $pos);
             }
             $db = trim($db, '/');
         }
@@ -132,8 +132,8 @@ class MongoDb extends BaseNoSqlDbService
             $client = @new \MongoClient($dsn, $options, $driverOptions);
 
             $this->dbConn = $client->selectDB($db);
-        } catch (\Exception $_ex) {
-            throw new InternalServerErrorException("Unexpected MongoDb Service Exception:\n{$_ex->getMessage()}");
+        } catch (\Exception $ex) {
+            throw new InternalServerErrorException("Unexpected MongoDb Service Exception:\n{$ex->getMessage()}");
         }
     }
 
@@ -144,8 +144,8 @@ class MongoDb extends BaseNoSqlDbService
     {
         try {
             $this->dbConn = null;
-        } catch (\Exception $_ex) {
-            error_log("Failed to disconnect from database.\n{$_ex->getMessage()}");
+        } catch (\Exception $ex) {
+            error_log("Failed to disconnect from database.\n{$ex->getMessage()}");
         }
     }
 
@@ -170,17 +170,17 @@ class MongoDb extends BaseNoSqlDbService
      */
     public function correctTableName(&$name)
     {
-        static $_existing = null;
+        static $existing = null;
 
-        if (!$_existing) {
-            $_existing = $this->dbConn->getCollectionNames();
+        if (!$existing) {
+            $existing = $this->dbConn->getCollectionNames();
         }
 
         if (empty($name)) {
             throw new BadRequestException('Table name can not be empty.');
         }
 
-        if (false === array_search($name, $_existing)) {
+        if (false === array_search($name, $existing)) {
             throw new NotFoundException("Table '$name' not found.");
         }
 
@@ -194,7 +194,7 @@ class MongoDb extends BaseNoSqlDbService
     {
         try {
             return parent::handleResource($resources);
-        } catch (NotFoundException $_ex) {
+        } catch (NotFoundException $ex) {
             // If version 1.x, the resource could be a table
 //            if ($this->request->getApiVersion())
 //            {
@@ -206,7 +206,7 @@ class MongoDb extends BaseNoSqlDbService
 //                return $resource->handleRequest( $this->request, $newPath, $this->outputFormat );
 //            }
 
-            throw $_ex;
+            throw $ex;
         }
     }
 }
