@@ -1,7 +1,9 @@
 <?php
 namespace DreamFactory\Core\MongoDb\Resources;
 
+use DreamFactory\Core\Enums\ApiOptions;
 use DreamFactory\Core\Utility\ResourcesWrapper;
+use DreamFactory\Core\Utility\Session;
 use DreamFactory\Library\Utility\ArrayUtils;
 use DreamFactory\Library\Utility\Enums\Verbs;
 use DreamFactory\Library\Utility\Inflector;
@@ -124,7 +126,7 @@ class Table extends BaseDbTableResource
         $record = DbUtilities::validateAsArray($record, null, false, 'There are no fields in the record.');
         $coll = $this->selectTable($table);
 
-        $fields = ArrayUtils::get($extras, 'fields');
+        $fields = ArrayUtils::get($extras, ApiOptions::FIELDS);
         $ssFilters = ArrayUtils::get($extras, 'ss_filters');
 
         $fieldsInfo = $this->getFieldsInfo($table);
@@ -164,7 +166,7 @@ class Table extends BaseDbTableResource
         $record = DbUtilities::validateAsArray($record, null, false, 'There are no fields in the record.');
         $coll = $this->selectTable($table);
 
-        $fields = ArrayUtils::get($extras, 'fields');
+        $fields = ArrayUtils::get($extras, ApiOptions::FIELDS);
         $ssFilters = ArrayUtils::get($extras, 'ss_filters');
 
         $fieldsInfo = $this->getFieldsInfo($table);
@@ -236,7 +238,7 @@ class Table extends BaseDbTableResource
 
         $coll = $this->selectTable($table);
 
-        $fields = ArrayUtils::get($extras, 'fields');
+        $fields = ArrayUtils::get($extras, ApiOptions::FIELDS);
         $ssFilters = ArrayUtils::get($extras, 'ss_filters');
 
         $fieldArray = static::buildFieldArray($fields);
@@ -263,16 +265,16 @@ class Table extends BaseDbTableResource
     {
         $coll = $this->selectTable($table);
 
-        $fields = ArrayUtils::get($extras, 'fields');
+        $fields = ArrayUtils::get($extras, ApiOptions::FIELDS);
         $ssFilters = ArrayUtils::get($extras, 'ss_filters');
 
         $fieldArray = static::buildFieldArray($fields);
         $criteria = static::buildCriteriaArray($filter, $params, $ssFilters);
 
-        $limit = intval(ArrayUtils::get($extras, 'limit', 0));
-        $offset = intval(ArrayUtils::get($extras, 'offset', 0));
-        $sort = static::buildSortArray(ArrayUtils::get($extras, 'order'));
-        $addCount = ArrayUtils::getBool($extras, 'include_count', false);
+        $limit = intval(ArrayUtils::get($extras, ApiOptions::LIMIT, 0));
+        $offset = intval(ArrayUtils::get($extras, ApiOptions::OFFSET, 0));
+        $sort = static::buildSortArray(ArrayUtils::get($extras, ApiOptions::ORDER));
+        $addCount = ArrayUtils::getBool($extras, ApiOptions::INCLUDE_COUNT, false);
 
         try {
             /** @var \MongoCursor $result */
@@ -547,7 +549,7 @@ class Table extends BaseDbTableResource
 
         // build filter array if necessary
         if (!is_array($filter)) {
-//            Session::replaceLookups( $filter );
+            Session::replaceLookups( $filter );
             $test = json_decode($filter, true);
             if (!is_null($test)) {
                 // original filter was a json string, use it as array
@@ -951,7 +953,7 @@ class Table extends BaseDbTableResource
         $single = false
     ){
         $ssFilters = ArrayUtils::get($extras, 'ss_filters');
-        $fields = ArrayUtils::get($extras, 'fields');
+        $fields = ArrayUtils::get($extras, ApiOptions::FIELDS);
         $fieldsInfo = ArrayUtils::get($extras, 'fields_info');
         $requireMore = ArrayUtils::get($extras, 'require_more');
         $updates = ArrayUtils::get($extras, 'updates');
@@ -1126,7 +1128,7 @@ class Table extends BaseDbTableResource
 
         $updates = ArrayUtils::get($extras, 'updates');
         $ssFilters = ArrayUtils::get($extras, 'ss_filters');
-        $fields = ArrayUtils::get($extras, 'fields');
+        $fields = ArrayUtils::get($extras, ApiOptions::FIELDS);
         $requireMore = ArrayUtils::get($extras, 'require_more');
 
         $out = array();

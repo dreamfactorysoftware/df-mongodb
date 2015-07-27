@@ -1,6 +1,7 @@
 <?php
 namespace DreamFactory\Core\MongoDb\Services;
 
+use DreamFactory\Core\Utility\Session;
 use DreamFactory\Library\Utility\ArrayUtils;
 use DreamFactory\Core\Components\RequireExtensions;
 use DreamFactory\Core\Exceptions\BadRequestException;
@@ -82,7 +83,7 @@ class MongoDb extends BaseNoSqlDbService
         static::checkExtensions(['mongo']);
 
         $config = ArrayUtils::clean(ArrayUtils::get($settings, 'config'));
-//        Session::replaceLookups( $config, true );
+        Session::replaceLookups( $config, true );
 
         $dsn = strval(ArrayUtils::get($config, 'dsn'));
         if (!empty($dsn)) {
