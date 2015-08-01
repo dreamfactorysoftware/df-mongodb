@@ -21,13 +21,13 @@ class MongoDbConfig extends BaseServiceConfigModel
 {
     use RequireExtensions;
 
-    protected $table = 'mongo_db_config';
+    protected $table = 'mongodb_config';
 
     protected $fillable = ['service_id', 'dsn', 'options', 'driver_options'];
 
     protected $casts = ['options' => 'array', 'driver_options' => 'array'];
 
-    public static function validateConfig($config, $create=true)
+    public static function validateConfig($config, $create = true)
     {
         static::checkExtensions(['mongo']);
 
@@ -56,13 +56,23 @@ class MongoDbConfig extends BaseServiceConfigModel
                     ' For further information, see http://php.net/manual/en/mongoclient.construct.php.';
                 break;
             case 'options':
-                $schema['type'] = 'object(string,string)';
+                $schema['type'] = 'object';
+                $schema['object'] =
+                    [
+                        'key'   => ['label' => 'Name', 'type' => 'string'],
+                        'value' => ['label' => 'Value', 'type' => 'string']
+                    ];
                 $schema['description'] =
                     'An array of options for the connection.' .
                     ' For further options, see http://php.net/manual/en/mongoclient.construct.php..';
                 break;
             case 'driver_options':
-                $schema['type'] = 'object(string,string)';
+                $schema['type'] = 'object';
+                $schema['object'] =
+                    [
+                        'key'   => ['label' => 'Name', 'type' => 'string'],
+                        'value' => ['label' => 'Value', 'type' => 'string']
+                    ];
                 $schema['description'] =
                     'An array of options for the MongoDB driver, currently just supporting "context".' .
                     ' For further information, see http://php.net/manual/en/mongo.connecting.ssl.php#mongo.connecting.context.ssl.';

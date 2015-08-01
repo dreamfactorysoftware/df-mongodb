@@ -14,7 +14,7 @@ class CreateMongoDbTables extends Migration
     {
         // MongoDB Service Configuration
         Schema::create(
-            'mongo_db_config',
+            'mongodb_config',
             function (Blueprint $t){
                 $t->integer('service_id')->unsigned()->primary();
                 $t->foreign('service_id')->references('id')->on('service')->onDelete('cascade');
@@ -33,6 +33,6 @@ class CreateMongoDbTables extends Migration
     public function down()
     {
         // MongoDB Service Configuration
-        Schema::dropIfExists('mongo_db_config');
+        Schema::dropIfExists('mongodb_config');
     }
 }

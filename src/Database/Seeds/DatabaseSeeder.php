@@ -13,7 +13,7 @@ class DatabaseSeeder extends BaseModelSeeder
 
     protected $records = [
         [
-            'name'           => 'mongo_db',
+            'name'           => 'mongodb',
             'class_name'     => MongoDb::class,
             'config_handler' => MongoDbConfig::class,
             'label'          => 'MongoDB',
