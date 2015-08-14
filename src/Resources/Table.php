@@ -66,6 +66,14 @@ class Table extends BaseDbTableResource
     /**
      * {@inheritdoc}
      */
+    public function listResources($schema = null, $refresh = false)
+    {
+        return $this->parent->getConnection()->getCollectionNames();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function getResources($only_handlers = false)
     {
         if ($only_handlers) {
@@ -73,7 +81,7 @@ class Table extends BaseDbTableResource
         }
 //        $refresh = $this->request->queryBool('refresh');
 
-        $names = $this->parent->getConnection()->getCollectionNames();
+        $names = $this->listResources();
 
         $extras =
             DbUtilities::getSchemaExtrasForTables($this->parent->getServiceId(), $names, false, 'table,label,plural');
@@ -102,20 +110,6 @@ class Table extends BaseDbTableResource
         }
 
         return $tables;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function listAccessComponents($schema = null, $refresh = false)
-    {
-        $output = [];
-        $result = $this->parent->getConnection()->getCollectionNames();
-        foreach ($result as $name) {
-            $output[] = static::RESOURCE_NAME . '/' . $name;
-        }
-
-        return $output;
     }
 
     /**
