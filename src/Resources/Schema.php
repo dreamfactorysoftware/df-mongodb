@@ -2,11 +2,9 @@
  namespace DreamFactory\Core\MongoDb\Resources;
 
 use DreamFactory\Library\Utility\ArrayUtils;
-use DreamFactory\Library\Utility\Inflector;
 use DreamFactory\Core\Exceptions\BadRequestException;
 use DreamFactory\Core\Exceptions\InternalServerErrorException;
 use DreamFactory\Core\Resources\BaseNoSqlDbSchemaResource;
-use DreamFactory\Core\Utility\DbUtilities;
 use DreamFactory\Core\MongoDb\Services\MongoDb;
 
 class Schema extends BaseNoSqlDbSchemaResource
@@ -47,56 +45,9 @@ class Schema extends BaseNoSqlDbSchemaResource
     /**
      * {@inheritdoc}
      */
-    public function getResources($only_handlers = false)
+    public function listResources($schema = null, $refresh = false)
     {
-        if ($only_handlers) {
-            return [];
-        }
-//        $refresh = $this->request->queryBool('refresh');
-
-        $names = $this->parent->getConnection()->getCollectionNames();
-
-        $extras =
-            DbUtilities::getSchemaExtrasForTables($this->parent->getServiceId(), $names, false, 'table,label,plural');
-
-        $tables = [];
-        foreach ($names as $name) {
-            $label = '';
-            $plural = '';
-            foreach ($extras as $each) {
-                if (0 == strcasecmp($name, ArrayUtils::get($each, 'table', ''))) {
-                    $label = ArrayUtils::get($each, 'label');
-                    $plural = ArrayUtils::get($each, 'plural');
-                    break;
-                }
-            }
-
-            if (empty($label)) {
-                $label = Inflector::camelize($name, ['_', '.'], true);
-            }
-
-            if (empty($plural)) {
-                $plural = Inflector::pluralize($label);
-            }
-
-            $tables[] = ['name' => $name, 'label' => $label, 'plural' => $plural];
-        }
-
-        return $tables;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function listAccessComponents($schema = null, $refresh = false)
-    {
-        $output = [];
-        $result = $this->parent->getConnection()->getCollectionNames();
-        foreach ($result as $name) {
-            $output[] = static::RESOURCE_NAME . '/' . $name;
-        }
-
-        return $output;
+        return $this->parent->getConnection()->getCollectionNames();
     }
 
     /**
