@@ -6,7 +6,6 @@ use DreamFactory\Core\Utility\ResourcesWrapper;
 use DreamFactory\Core\Utility\Session;
 use DreamFactory\Library\Utility\ArrayUtils;
 use DreamFactory\Library\Utility\Enums\Verbs;
-use DreamFactory\Library\Utility\Inflector;
 use DreamFactory\Core\Exceptions\BadRequestException;
 use DreamFactory\Core\Exceptions\InternalServerErrorException;
 use DreamFactory\Core\Exceptions\NotFoundException;
@@ -69,47 +68,6 @@ class Table extends BaseDbTableResource
     public function listResources($schema = null, $refresh = false)
     {
         return $this->parent->getConnection()->getCollectionNames();
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getResources($only_handlers = false)
-    {
-        if ($only_handlers) {
-            return [];
-        }
-//        $refresh = $this->request->queryBool('refresh');
-
-        $names = $this->listResources();
-
-        $extras =
-            DbUtilities::getSchemaExtrasForTables($this->parent->getServiceId(), $names, false, 'table,label,plural');
-
-        $tables = [];
-        foreach ($names as $name) {
-            $label = '';
-            $plural = '';
-            foreach ($extras as $each) {
-                if (0 == strcasecmp($name, ArrayUtils::get($each, 'table', ''))) {
-                    $label = ArrayUtils::get($each, 'label');
-                    $plural = ArrayUtils::get($each, 'plural');
-                    break;
-                }
-            }
-
-            if (empty($label)) {
-                $label = Inflector::camelize($name, ['_', '.'], true);
-            }
-
-            if (empty($plural)) {
-                $plural = Inflector::pluralize($label);
-            }
-
-            $tables[] = ['name' => $name, 'label' => $label, 'plural' => $plural];
-        }
-
-        return $tables;
     }
 
     /**
