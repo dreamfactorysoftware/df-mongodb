@@ -45,14 +45,6 @@ class Schema extends BaseNoSqlDbSchemaResource
     /**
      * {@inheritdoc}
      */
-    public function listResources($schema = null, $refresh = false)
-    {
-        return $this->parent->getConnection()->getCollectionNames();
-    }
-
-    /**
-     * {@inheritdoc}
-     */
     public function describeTable($table, $refresh = true)
     {
         $name = (is_array($table)) ? ArrayUtils::get($table, 'name') : $table;
@@ -85,6 +77,8 @@ class Schema extends BaseNoSqlDbSchemaResource
             $out = array('name' => $result->getName());
             $out['indexes'] = $result->getIndexInfo();
 
+            $this->refreshCachedTables();
+
             return $out;
         } catch (\Exception $ex) {
             throw new InternalServerErrorException("Failed to create table '$table'.\n{$ex->getMessage()}");
@@ -101,6 +95,7 @@ class Schema extends BaseNoSqlDbSchemaResource
         }
 
         $this->selectTable($table);
+        $this->refreshCachedTables();
 
 //		throw new InternalServerErrorException( "Failed to update table '$name'." );
         return array('name' => $table);
@@ -118,6 +113,7 @@ class Schema extends BaseNoSqlDbSchemaResource
 
         try {
             $this->selectTable($table)->drop();
+            $this->refreshCachedTables();
 
             return array('name' => $name);
         } catch (\Exception $ex) {
