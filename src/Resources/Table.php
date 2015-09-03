@@ -65,14 +65,6 @@ class Table extends BaseDbTableResource
     /**
      * {@inheritdoc}
      */
-    public function listResources($schema = null, $refresh = false)
-    {
-        return $this->parent->getConnection()->getCollectionNames();
-    }
-
-    /**
-     * {@inheritdoc}
-     */
     public function updateRecordsByFilter($table, $record, $filter = null, $params = [], $extras = [])
     {
         $record = DbUtilities::validateAsArray($record, null, false, 'There are no fields in the record.');
@@ -233,7 +225,6 @@ class Table extends BaseDbTableResource
             $result = $coll->find($criteria, $fieldArray);
             $count = $result->count();
             $maxAllowed = static::getMaxRecordsReturnedLimit();
-            $needMore = (($count - $offset) > $maxAllowed);
             if ($offset) {
                 $result = $result->skip($offset);
             }
@@ -247,10 +238,11 @@ class Table extends BaseDbTableResource
 
             $out = iterator_to_array($result);
             $out = static::cleanRecords($out);
+            $needMore = (($count - $offset) > $limit);
             if ($addCount || $needMore) {
                 $out['meta']['count'] = $count;
                 if ($needMore) {
-                    $out['meta']['next'] = $offset + $limit + 1;
+                    $out['meta']['next'] = $offset + $limit;
                 }
             }
 
