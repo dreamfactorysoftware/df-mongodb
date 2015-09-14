@@ -1,6 +1,7 @@
 <?php
 namespace DreamFactory\Core\MongoDb\Resources;
 
+use DreamFactory\Core\Database\ColumnSchema;
 use DreamFactory\Core\Enums\ApiOptions;
 use DreamFactory\Core\Utility\ResourcesWrapper;
 use DreamFactory\Core\Utility\Session;
@@ -267,7 +268,7 @@ class Table extends BaseDbTableResource
         $type = ArrayUtils::get($requested_types, 0, 'string');
         $type = (empty($type)) ? 'string' : $type;
 
-        return [['name' => static::DEFAULT_ID_FIELD, 'type' => $type, 'required' => false]];
+        return [new ColumnSchema(['name' => static::DEFAULT_ID_FIELD, 'type' => $type, 'required' => false])];
     }
 
     /**
@@ -766,6 +767,11 @@ class Table extends BaseDbTableResource
         return $ids;
     }
 
+    protected function getCurrentTimestamp()
+    {
+        return new \MongoDate();
+    }
+
     /**
      * @param array $record
      * @param array $fields_info
@@ -778,81 +784,19 @@ class Table extends BaseDbTableResource
      */
     protected function parseRecord($record, $fields_info, $filter_info = null, $for_update = false, $old_record = null)
     {
-        $record = $this->interpretRecordValues($record);
-
         switch ($this->getAction()) {
             case Verbs::MERGE:
             case Verbs::PATCH:
                 if (static::doesRecordContainModifier($record)) {
-                    return $record;
+                    return $this->interpretRecordValues($record);
                 }
                 break;
         }
 
-        $parsed = (empty($fields_info)) ? $record : [];
-        if (!empty($fields_info)) {
-            $keys = array_keys($record);
-            $values = array_values($record);
-            foreach ($fields_info as $fieldInfo) {
-                $name = ArrayUtils::get($fieldInfo, 'name', '');
-                $type = ArrayUtils::get($fieldInfo, 'type');
-                $pos = array_search($name, $keys);
-                if (false !== $pos) {
-                    $fieldVal = ArrayUtils::get($values, $pos);
-                    // due to conversion from XML to array, null or empty xml elements have the array value of an empty array
-                    if (is_array($fieldVal) && empty($fieldVal)) {
-                        $fieldVal = null;
-                    }
-
-                    /** validations **/
-
-                    $validations = ArrayUtils::get($fieldInfo, 'validation');
-
-                    if (!static::validateFieldValue($name, $fieldVal, $validations, $for_update, $fieldInfo)) {
-                        unset($keys[$pos]);
-                        unset($values[$pos]);
-                        continue;
-                    }
-
-                    $parsed[$name] = $fieldVal;
-                    unset($keys[$pos]);
-                    unset($values[$pos]);
-                }
-
-                // add or override for specific fields
-                switch ($type) {
-                    case 'timestamp_on_create':
-                        if (!$for_update) {
-                            $parsed[$name] = new \MongoDate();
-                        }
-                        break;
-                    case 'timestamp_on_update':
-                        $parsed[$name] = new \MongoDate();
-                        break;
-                    case 'user_id_on_create':
-                        if (!$for_update) {
-                            $userId = 1; //Session::getCurrentUserId();
-                            if (isset($userId)) {
-                                $parsed[$name] = $userId;
-                            }
-                        }
-                        break;
-                    case 'user_id_on_update':
-                        $userId = 1; //Session::getCurrentUserId();
-                        if (isset($userId)) {
-                            $parsed[$name] = $userId;
-                        }
-                        break;
-                }
-            }
-        }
-
-        if (!empty($filter_info)) {
-            $this->validateRecord($parsed, $filter_info, $for_update, $old_record);
-        }
-
         // convert to native format
-        return static::toMongoObjects($parsed);
+        $result = parent::parseRecord($record, $fields_info, $filter_info, $for_update, $old_record);
+
+        return static::toMongoObjects($result);
     }
 
     /**
@@ -878,11 +822,11 @@ class Table extends BaseDbTableResource
     /**
      * {@inheritdoc}
      */
-    protected function initTransaction($handle = null)
+    protected function initTransaction($table_name, &$id_fields = null, $id_types = null, $require_ids = true)
     {
-        $this->collection = $this->selectTable($handle);
+        $this->collection = $this->selectTable($table_name);
 
-        return parent::initTransaction($handle);
+        return parent::initTransaction($table_name, $id_fields, $id_types, $require_ids);
     }
 
     /**
@@ -898,7 +842,6 @@ class Table extends BaseDbTableResource
     ){
         $ssFilters = ArrayUtils::get($extras, 'ss_filters');
         $fields = ArrayUtils::get($extras, ApiOptions::FIELDS);
-        $fieldsInfo = ArrayUtils::get($extras, 'fields_info');
         $requireMore = ArrayUtils::get($extras, 'require_more');
         $updates = ArrayUtils::get($extras, 'updates');
 
@@ -910,7 +853,7 @@ class Table extends BaseDbTableResource
         $out = [];
         switch ($this->getAction()) {
             case Verbs::POST:
-                $parsed = $this->parseRecord($record, $fieldsInfo, $ssFilters);
+                $parsed = $this->parseRecord($record, $this->tableFieldsInfo, $ssFilters);
                 if (empty($parsed)) {
                     throw new BadRequestException('No valid fields were found in record.');
                 }
@@ -931,10 +874,10 @@ class Table extends BaseDbTableResource
 
             case Verbs::PUT:
                 if (!empty($updates)) {
-                    $parsed = $this->parseRecord($updates, $fieldsInfo, $ssFilters, true);
+                    $parsed = $this->parseRecord($updates, $this->tableFieldsInfo, $ssFilters, true);
                     $updates = $parsed;
                 } else {
-                    $parsed = $this->parseRecord($record, $fieldsInfo, $ssFilters, true);
+                    $parsed = $this->parseRecord($record, $this->tableFieldsInfo, $ssFilters, true);
                 }
                 if (empty($parsed)) {
                     throw new BadRequestException('No valid fields were found in record.');
@@ -974,10 +917,10 @@ class Table extends BaseDbTableResource
             case Verbs::MERGE:
             case Verbs::PATCH:
                 if (!empty($updates)) {
-                    $parsed = $this->parseRecord($updates, $fieldsInfo, $ssFilters, true);
+                    $parsed = $this->parseRecord($updates, $this->tableFieldsInfo, $ssFilters, true);
                     $updates = $parsed;
                 } else {
-                    $parsed = $this->parseRecord($record, $fieldsInfo, $ssFilters, true);
+                    $parsed = $this->parseRecord($record, $this->tableFieldsInfo, $ssFilters, true);
                 }
                 if (empty($parsed)) {
                     throw new BadRequestException('No valid fields were found in record.');
