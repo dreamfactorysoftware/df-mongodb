@@ -52,7 +52,7 @@ class MongoDbConfig extends BaseServiceConfigModel
                 $schema['label'] = 'Connection String';
                 $schema['default'] = 'mongodb://[username:password@]host1[:port1][,host2[:port2:],...]/db';
                 $schema['description'] =
-                    'The username, password, and db values can be added in the connection string or in the options below.' .
+                    'The connection string for the service. The username, password, and db values can be added in the connection string or in the options below.' .
                     ' For further information, see http://php.net/manual/en/mongoclient.construct.php.';
                 break;
             case 'options':
@@ -64,7 +64,7 @@ class MongoDbConfig extends BaseServiceConfigModel
                     ];
                 $schema['description'] =
                     'An array of options for the connection.' .
-                    ' For further options, see http://php.net/manual/en/mongoclient.construct.php..';
+                    ' For further options, see http://php.net/manual/en/mongoclient.construct.php.';
                 break;
             case 'driver_options':
                 $schema['type'] = 'object';
