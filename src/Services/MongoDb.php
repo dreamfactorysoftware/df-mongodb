@@ -169,7 +169,7 @@ class MongoDb extends BaseNoSqlDbService
         return $this->dbConn;
     }
 
-    public function getTableNames($schema = null, $refresh = false)
+    public function getTableNames($schema = null, $refresh = false, $use_alias = false)
     {
         if ($refresh ||
             (empty($this->tableNames) &&
