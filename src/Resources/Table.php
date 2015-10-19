@@ -1024,7 +1024,7 @@ class Table extends BaseDbTableResource
                 $result = $this->collection->batchInsert($this->batchRecords, ['continueOnError' => false]);
                 static::processResult($result);
 
-                $out = static::cleanRecords($this->batchRecords, $fields);
+                $out = static::cleanRecords($this->batchRecords, $fields, static::DEFAULT_ID_FIELD);
                 break;
             case Verbs::PUT:
                 if (empty($updates)) {
