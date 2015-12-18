@@ -3,6 +3,8 @@ namespace DreamFactory\Core\MongoDb\Resources;
 
 use DreamFactory\Core\Database\ColumnSchema;
 use DreamFactory\Core\Enums\ApiOptions;
+use DreamFactory\Core\Enums\DbComparisonOperators;
+use DreamFactory\Core\Enums\DbLogicalOperators;
 use DreamFactory\Core\Utility\ResourcesWrapper;
 use DreamFactory\Core\Utility\Session;
 use DreamFactory\Library\Utility\ArrayUtils;
@@ -318,11 +320,55 @@ class Table extends BaseDbTableResource
         return $out;
     }
 
+    public static function localizeOperator($operator)
+    {
+        switch ($operator) {
+            // Logical
+            case DbLogicalOperators::AND_SYM:
+            case DbLogicalOperators::AND_STR:
+                return '$and';
+            case DbLogicalOperators::OR_SYM:
+            case DbLogicalOperators::OR_STR:
+                return '$or';
+            case DbLogicalOperators::NOR_STR:
+                return '$nor';
+            case DbLogicalOperators::NOT_STR:
+                return '$not';
+            // Comparison
+            case DbComparisonOperators::EQ_STR:
+            case DbComparisonOperators::EQ:
+                return '$eq';
+            case DbComparisonOperators::NE_STR:
+            case DbComparisonOperators::NE:
+            case DbComparisonOperators::NE_2:
+                return '$ne';
+            case DbComparisonOperators::GT_STR:
+            case DbComparisonOperators::GT:
+                return '$gt';
+            case DbComparisonOperators::GTE_STR:
+                case DbComparisonOperators::GTE:
+                return '$gte';
+            case DbComparisonOperators::LT_STR:
+                case DbComparisonOperators::LT:
+                return '$lt';
+            case DbComparisonOperators::LTE_STR:
+                case DbComparisonOperators::LTE:
+                return '$lte';
+            case DbComparisonOperators::IN:
+                return '$in';
+            case DbComparisonOperators::NOT_IN:
+                return '$nin';
+            default:
+                return $operator;
+        }
+    }
+
     /**
      * @param string|array $filter Filter for querying records by
      * @param array        $params Filter replacement parameters
      *
      * @return array
+     * @throws \DreamFactory\Core\Exceptions\BadRequestException
      */
     protected static function buildFilterArray($filter, $params = null)
     {
@@ -335,101 +381,116 @@ class Table extends BaseDbTableResource
             return static::toMongoObjects($filter);
         }
 
-        $search = [' or ', ' and ', ' nor '];
-        $replace = [' || ', ' && ', ' NOR '];
-        $filter = trim(str_ireplace($search, $replace, $filter));
-
         // handle logical operators first
-        $ops = array_map('trim', explode(' || ', $filter));
-        if (count($ops) > 1) {
-            $parts = [];
-            foreach ($ops as $op) {
-                $parts[] = static::buildFilterArray($op, $params);
+        $logicalOperators = DbLogicalOperators::getDefinedConstants();
+        foreach ($logicalOperators as $logicalOp) {
+            if (DbLogicalOperators::NOT_STR === $logicalOp) {
+                // NOT(a = 1)  or NOT (a = 1)format
+                if ((0 === stripos($filter, $logicalOp . '(')) || (0 === stripos($filter, $logicalOp . '('))) {
+                    $parts = trim(substr($filter, 3));
+                    $parts = static::buildFilterArray($parts, $params);
+
+                    return [static::localizeOperator($logicalOp) => $parts];
+                }
+            } else {
+                // (a = 1) AND (b = 2) format
+                $paddedOp = ') ' . $logicalOp . ' (';
+                if (false !== $pos = stripos($filter, $paddedOp)) {
+                    $left = trim(substr($filter, 0, $pos));
+                    $right = trim(substr($filter, $pos + strlen($paddedOp)));
+                    $left = static::buildFilterArray($left, $params);
+                    $right = static::buildFilterArray($right, $params);
+
+                    return [static::localizeOperator($logicalOp) => [$left,$right]];
+                }
+                // (a = 1)AND(b = 2) format
+                $paddedOp = ')' . $logicalOp . '(';
+                if (false !== $pos = stripos($filter, $paddedOp)) {
+                    $left = trim(substr($filter, 0, $pos));
+                    $right = trim(substr($filter, $pos + strlen($paddedOp)));
+                    $left = static::buildFilterArray($left, $params);
+                    $right = static::buildFilterArray($right, $params);
+
+                    return [static::localizeOperator($logicalOp) => [$left,$right]];
+                }
             }
-
-            return ['$or' => $parts];
         }
 
-        $ops = array_map('trim', explode(' NOR ', $filter));
-        if (count($ops) > 1) {
-            $parts = [];
-            foreach ($ops as $op) {
-                $parts[] = static::buildFilterArray($op, $params);
-            }
-
-            return ['$nor' => $parts];
-        }
-
-        $ops = array_map('trim', explode(' && ', $filter));
-        if (count($ops) > 1) {
-            $parts = [];
-            foreach ($ops as $op) {
-                $parts[] = static::buildFilterArray($op, $params);
-            }
-
-            return ['$and' => $parts];
-        }
-
-        // handle negation operator, i.e. starts with NOT?
-        if (0 == substr_compare($filter, 'not ', 0, 4, true)) {
-            $parts = trim(substr($filter, 4));
-
-            return ['$not' => $parts];
-        }
+        $filter = trim(trim($filter, '()'));
 
         // the rest should be comparison operators
-        $search = [' eq ', ' ne ', ' gte ', ' lte ', ' gt ', ' lt ', ' in ', ' nin ', ' all ', ' like ', ' <> '];
-        $replace = ['=', '!=', '>=', '<=', '>', '<', ' IN ', ' NIN ', ' ALL ', ' LIKE ', '!='];
-        $filter = trim(str_ireplace($search, $replace, $filter));
+        // Note: order matters here!
+        $sqlOperators = DbComparisonOperators::getParsingOrder();
+        foreach ($sqlOperators as $sqlOp) {
+            $paddedOp = static::padOperator($sqlOp);
+            if (false !== $pos = stripos($filter, $paddedOp)) {
+                $field = trim(substr($filter, 0, $pos));
+                $negate = false;
+                if (false !== strpos($field, ' ')) {
+                    $parts = explode(' ', $field);
+                    if ((count($parts) > 2) || (0 !== strcasecmp($parts[1], trim(DbLogicalOperators::NOT_STR)))) {
+                        // invalid field side of operator
+                        throw new BadRequestException('Invalid or unparsable field in filter request.');
+                    }
+                    $field = $parts[0];
+                    $negate = true;
+                }
 
-        // Note: order matters, watch '='
-        $sqlOperators = ['!=', '>=', '<=', '=', '>', '<', ' IN ', ' NIN ', ' ALL ', ' LIKE '];
-        $mongoOperators = ['$ne', '$gte', '$lte', '$eq', '$gt', '$lt', '$in', '$nin', '$all', 'MongoRegex'];
-        foreach ($sqlOperators as $key => $sqlOp) {
-            $ops = array_map('trim', explode($sqlOp, $filter));
-            if (count($ops) > 1) {
-                $field = $ops[0];
-                $val = static::determineValue($ops[1], $field, $params);
-                $mongoOp = $mongoOperators[$key];
-                switch ($mongoOp) {
-                    case '$eq':
-                        return [$field => $val];
-
-                    case '$in':
-                    case '$nin':
-                        // todo check for list of mongoIds
-                        $val = array_map('trim', explode(',', trim(trim($val, '(,)'), ',')));
-                        $valArray = [];
-                        foreach ($val as $item) {
-                            $valArray[] = static::determineValue($item, $field, $params);
+                $value = trim(substr($filter, $pos + strlen($paddedOp)));
+                if (DbComparisonOperators::requiresValueList($sqlOp)) {
+                    $value = trim($value, '()[]');
+                    $parsed = [];
+                    foreach (explode(',', $value) as $each) {
+                        $parsed[] = static::determineValue($each, $field, $params);
+                    }
+                    $value = $parsed;
+                } elseif (DbComparisonOperators::requiresNoValue($sqlOp)) {
+                    switch ($sqlOp) {
+                        case DbComparisonOperators::IS_NULL:
+                            return [$field => null];
+                        case DbComparisonOperators::IS_NOT_NULL:
+                            return [$field => ['$ne' => null]];
+                        case DbComparisonOperators::DOES_EXIST:
+                            return [$field => ['$exists' => true]];
+                        case DbComparisonOperators::DOES_NOT_EXIST:
+                            return [$field => ['$exists' => false]];
+                    }
+                } else {
+                    $value = static::determineValue($value, $field, $params);
+                    if ('$eq' === static::localizeOperator($sqlOp)) {
+                        // prior to 3.0
+                        if ($negate) {
+                            return [$field => ['$ne' => $value]];
                         }
 
-                        return [$field => [$mongoOp => $valArray]];
-
-                    case 'MongoRegex':
+                        return [$field => $value];
+                    } elseif (DbComparisonOperators::LIKE === $sqlOp) {
 //			WHERE name LIKE "%Joe%"	(array("name" => new MongoRegex("/Joe/")));
 //			WHERE name LIKE "Joe%"	(array("name" => new MongoRegex("/^Joe/")));
 //			WHERE name LIKE "%Joe"	(array("name" => new MongoRegex("/Joe$/")));
-                        $val = static::determineValue($ops[1], $field, $params);
-                        if ('%' == $val[strlen($val) - 1]) {
-                            if ('%' == $val[0]) {
-                                $val = '/' . trim($val, '%') . '/ ';
+                        if ('%' == $value[strlen($value) - 1]) {
+                            if ('%' == $value[0]) {
+                                $value = '/' . trim($value, '%') . '/ ';
                             } else {
-                                $val = '/^' . rtrim($val, '%') . '/ ';
+                                $value = '/^' . rtrim($value, '%') . '/ ';
                             }
                         } else {
-                            if ('%' == $val[0]) {
-                                $val = '/' . trim($val, '%') . '$/ ';
+                            if ('%' == $value[0]) {
+                                $value = '/' . trim($value, '%') . '$/ ';
                             } else {
-                                $val = '/' . $val . '/ ';
+                                $value = '/' . $value . '/ ';
                             }
                         }
 
-                        return [$field => new \MongoRegex($val)];
-
-                    default:
-                        return [$field => [$mongoOp => $val]];
+                        return [$field => new \MongoRegex($value)];
+                    }
                 }
+
+                if ($negate) {
+                    $value = ['$not' => $value];
+                }
+
+                return [$field => [static::localizeOperator($sqlOp) => $value]];
             }
         }
 
@@ -952,7 +1013,6 @@ class Table extends BaseDbTableResource
 
                     // need to retrieve the full record here
                     if ($requireMore) {
-                        /** @var \MongoCursor $result */
                         $result = $this->collection->findOne($criteria, $fieldArray);
                     } else {
                         $result = [static::DEFAULT_ID_FIELD => $id];
@@ -1034,7 +1094,7 @@ class Table extends BaseDbTableResource
                 $filter = [static::DEFAULT_ID_FIELD => ['$in' => $this->batchIds]];
                 $criteria = static::buildCriteriaArray($filter, null, $ssFilters);
 
-                $result = $this->collection->update($criteria, $updates, null, ['multiple' => true]);
+                $result = $this->collection->update($criteria, $updates, ['multiple' => true]);
                 $rows = static::processResult($result);
                 if (0 === $rows) {
                     throw new NotFoundException('No requested records were found to update.');
@@ -1091,7 +1151,6 @@ class Table extends BaseDbTableResource
 
                 if ($requireMore) {
                     $fieldArray = static::buildFieldArray($fields);
-                    /** @var \MongoCursor $result */
                     $result = $this->collection->find($criteria, $fieldArray);
                     $result = static::cleanRecords(iterator_to_array($result));
                     if (empty($result)) {
@@ -1137,7 +1196,6 @@ class Table extends BaseDbTableResource
                 $criteria = static::buildCriteriaArray($filter, null, $ssFilters);
                 $fieldArray = static::buildFieldArray($fields);
 
-                /** @var \MongoCursor $result */
                 $result = $this->collection->find($criteria, $fieldArray);
                 $result = static::cleanRecords(iterator_to_array($result));
                 if (empty($result)) {
