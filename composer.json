@@ -33,7 +33,7 @@
     "wiki":   "https://wiki.dreamfactory.com"
   },
   "require":     {
-    "dreamfactory/df-core": "~0.1.0"
+    "dreamfactory/df-core": "~0.1.8"
   },
   "autoload":    {
     "psr-4": {
