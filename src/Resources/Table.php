@@ -483,6 +483,15 @@ class Table extends BaseDbTableResource
                         }
 
                         return [$field => new \MongoRegex($value)];
+                    } elseif (DbComparisonOperators::CONTAINS === $sqlOp) {
+//			WHERE name LIKE "%Joe%"	(array("name" => new MongoRegex("/Joe/")));
+                        return [$field => new \MongoRegex('/' . $value . '/ ')];
+                    } elseif (DbComparisonOperators::STARTS_WITH === $sqlOp) {
+//			WHERE name LIKE "Joe%"	(array("name" => new MongoRegex("/^Joe/")));
+                        return [$field => new \MongoRegex('/^' . $value . '/ ')];
+                    } elseif (DbComparisonOperators::ENDS_WITH === $sqlOp) {
+//			WHERE name LIKE "%Joe"	(array("name" => new MongoRegex("/Joe$/")));
+                        return [$field => new \MongoRegex('/' . $value . '$/ ')];
                     }
                 }
 
