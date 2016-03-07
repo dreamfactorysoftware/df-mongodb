@@ -6,6 +6,7 @@ use DreamFactory\Core\Exceptions\BadRequestException;
 use DreamFactory\Core\Exceptions\InternalServerErrorException;
 use DreamFactory\Core\Resources\BaseNoSqlDbSchemaResource;
 use DreamFactory\Core\MongoDb\Services\MongoDb;
+use MongoDB\Collection;
 
 class Schema extends BaseNoSqlDbSchemaResource
 {
@@ -33,7 +34,7 @@ class Schema extends BaseNoSqlDbSchemaResource
     /**
      * @param $name
      *
-     * @return \MongoCollection|null
+     * @return Collection|null
      */
     public function selectTable($name)
     {
@@ -51,8 +52,8 @@ class Schema extends BaseNoSqlDbSchemaResource
 
         try {
             $coll = $this->selectTable($name);
-            $out = array('name' => $coll->getName());
-            $out['indexes'] = $coll->getIndexInfo();
+            $out = array('name' => $coll->getCollectionName());
+            $out['indexes'] = $coll->listIndexes();
             $out['access'] = $this->getPermissions($name);
 
             return $out;

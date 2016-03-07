@@ -10,6 +10,8 @@ use DreamFactory\Core\Exceptions\InternalServerErrorException;
 use DreamFactory\Core\Services\BaseNoSqlDbService;
 use DreamFactory\Core\MongoDb\Resources\Schema;
 use DreamFactory\Core\MongoDb\Resources\Table;
+use MongoDB\Client;
+use MongoDB\Database;
 
 /**
  * MongoDb
@@ -44,7 +46,7 @@ class MongoDb extends BaseNoSqlDbService
     //*************************************************************************
 
     /**
-     * @var \MongoDB
+     * @var Database
      */
     protected $dbConn = null;
     /**
@@ -137,9 +139,10 @@ class MongoDb extends BaseNoSqlDbService
         }
 
         try {
-            $client = @new \MongoClient($dsn, $options, $driverOptions);
+            $client = new Client($dsn, $options, $driverOptions);
+//            $client = @new \MongoClient($dsn, $options, $driverOptions);
 
-            $this->dbConn = $client->selectDB($db);
+            $this->dbConn = $client->selectDatabase($db);
         } catch (\Exception $ex) {
             throw new InternalServerErrorException("Unexpected MongoDb Service Exception:\n{$ex->getMessage()}");
         }
@@ -159,6 +162,7 @@ class MongoDb extends BaseNoSqlDbService
 
     /**
      * @throws \Exception
+     * @return Database
      */
     public function getConnection()
     {
@@ -169,6 +173,13 @@ class MongoDb extends BaseNoSqlDbService
         return $this->dbConn;
     }
 
+    /**
+     * @param null $schema
+     * @param bool $refresh
+     * @param bool $use_alias
+     *
+     * @return array|\DreamFactory\Core\Database\TableSchema[]|mixed
+     */
     public function getTableNames($schema = null, $refresh = false, $use_alias = false)
     {
         if ($refresh ||
@@ -177,15 +188,15 @@ class MongoDb extends BaseNoSqlDbService
         ) {
             /** @type TableSchema[] $names */
             $names = [];
-            $tables = $this->dbConn->getCollectionNames();
+            $tables = $this->dbConn->listCollections();
             foreach ($tables as $table) {
-                $names[strtolower($table)] = new TableSchema(['name' => $table]);
+                $names[strtolower($table->getName())] = new TableSchema(['name' => $table->getName()]);
             }
             // merge db extras
             if (!empty($extrasEntries = $this->getSchemaExtrasForTables($tables, false))) {
                 foreach ($extrasEntries as $extras) {
                     if (!empty($extraName = strtolower(strval($extras['table'])))) {
-                        if (array_key_exists($extraName, $tables)) {
+                        if (array_key_exists($extraName, $names)) {
                             $names[$extraName]->fill($extras);
                         }
                     }
@@ -198,6 +209,9 @@ class MongoDb extends BaseNoSqlDbService
         return $this->tableNames;
     }
 
+    /**
+     *
+     */
     public function refreshTableCache()
     {
         $this->removeFromCache('table_names');
