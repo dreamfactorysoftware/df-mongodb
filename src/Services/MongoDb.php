@@ -140,7 +140,6 @@ class MongoDb extends BaseNoSqlDbService
 
         try {
             $client = new Client($dsn, $options, $driverOptions);
-//            $client = @new \MongoClient($dsn, $options, $driverOptions);
 
             $this->dbConn = $client->selectDatabase($db);
         } catch (\Exception $ex) {
@@ -188,21 +187,24 @@ class MongoDb extends BaseNoSqlDbService
         ) {
             /** @type TableSchema[] $names */
             $names = [];
-            $tables = $this->dbConn->listCollections();
-            foreach ($tables as $table) {
-                $names[strtolower($table->getName())] = new TableSchema(['name' => $table->getName()]);
+            $tables = [];
+            $collections = $this->dbConn->listCollections();
+            foreach ($collections as $collection) {
+                $name = $collection->getName();
+                $names[] = $name;
+                $tables[strtolower($name)] = new TableSchema(['name' => $name]);
             }
             // merge db extras
-            if (!empty($extrasEntries = $this->getSchemaExtrasForTables($tables, false))) {
+            if (!empty($extrasEntries = $this->getSchemaExtrasForTables($names, false))) {
                 foreach ($extrasEntries as $extras) {
                     if (!empty($extraName = strtolower(strval($extras['table'])))) {
-                        if (array_key_exists($extraName, $names)) {
-                            $names[$extraName]->fill($extras);
+                        if (array_key_exists($extraName, $tables)) {
+                            $tables[$extraName]->fill($extras);
                         }
                     }
                 }
             }
-            $this->tableNames = $names;
+            $this->tableNames = $tables;
             $this->addToCache('table_names', $this->tableNames, true);
         }
 

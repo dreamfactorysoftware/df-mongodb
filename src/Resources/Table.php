@@ -16,6 +16,10 @@ use DreamFactory\Core\Utility\ResourcesWrapper;
 use DreamFactory\Core\Utility\Session;
 use DreamFactory\Library\Utility\ArrayUtils;
 use DreamFactory\Library\Utility\Enums\Verbs;
+use MongoDB\BSON\Binary;
+use MongoDB\BSON\ObjectID;
+use MongoDB\BSON\Timestamp;
+use MongoDB\BSON\UTCDatetime;
 use MongoDB\Collection;
 use MongoDB\Driver\Cursor;
 use MongoDB\Model\BSONDocument;
@@ -354,13 +358,13 @@ class Table extends BaseDbTableResource
             case DbComparisonOperators::GT:
                 return '$gt';
             case DbComparisonOperators::GTE_STR:
-                case DbComparisonOperators::GTE:
+            case DbComparisonOperators::GTE:
                 return '$gte';
             case DbComparisonOperators::LT_STR:
-                case DbComparisonOperators::LT:
+            case DbComparisonOperators::LT:
                 return '$lt';
             case DbComparisonOperators::LTE_STR:
-                case DbComparisonOperators::LTE:
+            case DbComparisonOperators::LTE:
                 return '$lte';
             case DbComparisonOperators::IN:
                 return '$in';
@@ -409,7 +413,7 @@ class Table extends BaseDbTableResource
                     $left = static::buildFilterArray($left, $params);
                     $right = static::buildFilterArray($right, $params);
 
-                    return [static::localizeOperator($logicalOp) => [$left,$right]];
+                    return [static::localizeOperator($logicalOp) => [$left, $right]];
                 }
                 // (a = 1)AND(b = 2) format
                 $paddedOp = ')' . $logicalOp . '(';
@@ -419,7 +423,7 @@ class Table extends BaseDbTableResource
                     $left = static::buildFilterArray($left, $params);
                     $right = static::buildFilterArray($right, $params);
 
-                    return [static::localizeOperator($logicalOp) => [$left,$right]];
+                    return [static::localizeOperator($logicalOp) => [$left, $right]];
                 }
             }
         }
@@ -519,7 +523,7 @@ class Table extends BaseDbTableResource
      * @param string $field
      * @param array  $replacements
      *
-     * @return bool|float|int|string|\MongoId
+     * @return bool|float|int|string|ObjectID
      */
     private static function determineValue($value, $field = null, $replacements = null)
     {
@@ -715,14 +719,15 @@ class Table extends BaseDbTableResource
         if (!empty($record)) {
             foreach ($record as &$data) {
                 if (is_object($data)) {
-                    if ($data instanceof \MongoId) {
-                        $data = $data->__toString();
-                    } elseif ($data instanceof \MongoDate) {
-//                        $data = $data->__toString();
-                        $data = ['$date' => date(DATE_ISO8601, $data->sec)];
-                    } elseif ($data instanceof \MongoBinData) {
+                    if ($data instanceof ObjectID) {
                         $data = (string)$data;
-                    } elseif ($data instanceof \MongoDBRef) {
+                    } elseif ($data instanceof Timestamp) {
+                        $data = (string)$data;
+                    } elseif ($data instanceof UTCDatetime) {
+                        $data = $data->toDateTime();
+                        $data = ['$date' => $data];
+                    } elseif ($data instanceof Binary) {
+                        $data = $data->getData();
                     }
                 }
             }
@@ -778,7 +783,7 @@ class Table extends BaseDbTableResource
     protected static function mongoIdToId($value)
     {
         if (is_object($value)) {
-            /** $record \MongoId */
+            /** $record ObjectID */
             $value = (string)$value;
         }
 
@@ -802,7 +807,7 @@ class Table extends BaseDbTableResource
     /**
      * @param mixed $value
      *
-     * @return array|bool|float|int|\MongoId|string
+     * @return array|bool|float|int|ObjectID|string
      */
     protected static function idToMongoId($value)
     {
@@ -815,7 +820,7 @@ class Table extends BaseDbTableResource
         if (is_string($value)) {
             if ((24 == strlen($value))) {
                 try {
-                    $temp = new \MongoId($value);
+                    $temp = new ObjectID($value);
                     $value = $temp;
                 } catch (\Exception $ex) {
                     // obviously not a Mongo created Id, let it be
@@ -1105,7 +1110,14 @@ class Table extends BaseDbTableResource
                 $result = $this->collection->insertMany($this->batchRecords, ['continueOnError' => false]);
                 static::processResult($result);
 
-                $out = static::cleanRecords($this->batchRecords, $fields, static::DEFAULT_ID_FIELD);
+                if ($requireMore) {
+                    $fieldArray = static::buildFieldArray($fields);
+                    $result = $this->collection->find($criteria, $fieldArray);
+                    $out = static::cleanRecords(iterator_to_array($result));
+                    $out = static::cleanRecords($this->batchRecords, $fields, static::DEFAULT_ID_FIELD);
+                } else {
+                    $out = static::idsAsRecords(static::mongoIdsToIds($result->getInsertedIds()), static::DEFAULT_ID_FIELD);
+                }
                 break;
             case Verbs::PUT:
                 if (empty($updates)) {
@@ -1216,7 +1228,7 @@ class Table extends BaseDbTableResource
                 $filter = [static::DEFAULT_ID_FIELD => ['$in' => $this->batchIds]];
                 $criteria = static::buildCriteriaArray($filter, null, $ssFilters);
                 $options = [];
-                if (!empty($fieldArray = static::buildFieldArray($fields))){
+                if (!empty($fieldArray = static::buildFieldArray($fields))) {
                     $options['projection'] = $fieldArray;
                 }
 
@@ -1280,11 +1292,11 @@ class Table extends BaseDbTableResource
                 case Verbs::PUT:
                 case Verbs::PATCH:
                 case Verbs::MERGE:
-                foreach ($this->rollbackRecords as $record) {
-                    $filter = [static::DEFAULT_ID_FIELD => $record[static::DEFAULT_ID_FIELD]];
-                    $this->collection->replaceOne($filter, $record, ['upsert' => true]);
-                }
-                break;
+                    foreach ($this->rollbackRecords as $record) {
+                        $filter = [static::DEFAULT_ID_FIELD => $record[static::DEFAULT_ID_FIELD]];
+                        $this->collection->replaceOne($filter, $record, ['upsert' => true]);
+                    }
+                    break;
                 case Verbs::DELETE:
                     foreach ($this->rollbackRecords as $record) {
                         $this->collection->insertOne($record);
