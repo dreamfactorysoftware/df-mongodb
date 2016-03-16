@@ -2,14 +2,13 @@
 namespace DreamFactory\Core\MongoDb\Services;
 
 use DreamFactory\Core\Components\DbSchemaExtras;
-use DreamFactory\Core\Database\TableSchema;
-use DreamFactory\Core\Utility\Session;
-use DreamFactory\Library\Utility\ArrayUtils;
 use DreamFactory\Core\Components\RequireExtensions;
+use DreamFactory\Core\Database\TableSchema;
 use DreamFactory\Core\Exceptions\InternalServerErrorException;
-use DreamFactory\Core\Services\BaseNoSqlDbService;
 use DreamFactory\Core\MongoDb\Resources\Schema;
 use DreamFactory\Core\MongoDb\Resources\Table;
+use DreamFactory\Core\Services\BaseNoSqlDbService;
+use DreamFactory\Core\Utility\Session;
 use MongoDB\Client;
 use MongoDB\Database;
 
@@ -91,22 +90,23 @@ class MongoDb extends BaseNoSqlDbService
 
         static::checkExtensions(['mongo']);
 
-        $config = ArrayUtils::clean(ArrayUtils::get($settings, 'config'));
+        $config = array_get($settings, 'config');
+        $config = (empty($config) ? [] : (!is_array($config) ? [$config] : $config));
         Session::replaceLookups($config, true);
 
-        $dsn = strval(ArrayUtils::get($config, 'dsn'));
+        $dsn = strval(array_get($config, 'dsn'));
         if (!empty($dsn)) {
             if (0 != substr_compare($dsn, static::DSN_PREFIX, 0, static::DSN_PREFIX_LENGTH, true)) {
                 $dsn = static::DSN_PREFIX . $dsn;
             }
         }
 
-        $options = ArrayUtils::get($config, 'options', []);
+        $options = array_get($config, 'options', []);
         if (empty($options)) {
             $options = [];
         }
-        $user = ArrayUtils::get($config, 'username');
-        $password = ArrayUtils::get($config, 'password');
+        $user = array_get($config, 'username');
+        $password = array_get($config, 'password');
 
         // support old configuration options of user, pwd, and db in credentials directly
         if (!isset($options['username']) && isset($user)) {
@@ -115,11 +115,11 @@ class MongoDb extends BaseNoSqlDbService
         if (!isset($options['password']) && isset($password)) {
             $options['password'] = $password;
         }
-        if (!isset($options['db']) && (null !== $db = ArrayUtils::get($config, 'db', null, true))) {
+        if (!isset($options['db']) && (!empty($db = array_get($config, 'db')))) {
             $options['db'] = $db;
         }
 
-        if (!isset($db) && (null === $db = ArrayUtils::get($options, 'db', null, true))) {
+        if (!isset($db) && empty($db = array_get($options, 'db'))) {
             //  Attempt to find db in connection string
             $db = strstr(substr($dsn, static::DSN_PREFIX_LENGTH), '/');
             if (false !== $pos = strpos($db, '?')) {
@@ -132,8 +132,9 @@ class MongoDb extends BaseNoSqlDbService
             throw new InternalServerErrorException("No MongoDb database selected in configuration.");
         }
 
-        $driverOptions = ArrayUtils::clean(ArrayUtils::get($config, 'driver_options'));
-        if (null !== $context = ArrayUtils::get($driverOptions, 'context')) {
+        $driverOptions = array_get($config, 'driver_options');
+        $driverOptions = (empty($driverOptions) ? [] : (!is_array($driverOptions) ? [$driverOptions] : $driverOptions));
+        if (null !== $context = array_get($driverOptions, 'context')) {
             //  Automatically creates a stream from context
             $driverOptions['context'] = stream_context_create($context);
         }
@@ -185,7 +186,7 @@ class MongoDb extends BaseNoSqlDbService
             (empty($this->tableNames) &&
                 (null === $this->tableNames = $this->getFromCache('table_names')))
         ) {
-            /** @type TableSchema[] $names */
+            /** @type TableSchema[] $tables */
             $names = [];
             $tables = [];
             $collections = $this->dbConn->listCollections();
