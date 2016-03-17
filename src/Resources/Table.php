@@ -1177,11 +1177,11 @@ class Table extends BaseDbTableResource
 
                 $result = $this->collection->deleteMany($criteria);
                 if (0 === $result->getDeletedCount()) {
-//                    throw new NotFoundException('No records were found using the given identifiers.');
+                    throw new NotFoundException('No records were found using the given identifiers.');
                 }
 
                 if (count($this->batchIds) !== $result->getDeletedCount()) {
-//                    throw new BadRequestException('Batch Error: Not all requested records were deleted.');
+                    throw new BadRequestException('Batch Error: Not all requested records were deleted.');
                 }
                 break;
 
