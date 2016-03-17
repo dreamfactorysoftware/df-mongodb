@@ -2,14 +2,15 @@
 namespace DreamFactory\Core\MongoDb\Services;
 
 use DreamFactory\Core\Components\DbSchemaExtras;
-use DreamFactory\Core\Database\TableSchema;
-use DreamFactory\Core\Utility\Session;
-use DreamFactory\Library\Utility\ArrayUtils;
 use DreamFactory\Core\Components\RequireExtensions;
+use DreamFactory\Core\Database\TableSchema;
 use DreamFactory\Core\Exceptions\InternalServerErrorException;
-use DreamFactory\Core\Services\BaseNoSqlDbService;
 use DreamFactory\Core\MongoDb\Resources\Schema;
 use DreamFactory\Core\MongoDb\Resources\Table;
+use DreamFactory\Core\Services\BaseNoSqlDbService;
+use DreamFactory\Core\Utility\Session;
+use MongoDB\Client;
+use MongoDB\Database;
 
 /**
  * MongoDb
@@ -44,7 +45,7 @@ class MongoDb extends BaseNoSqlDbService
     //*************************************************************************
 
     /**
-     * @var \MongoDB
+     * @var Database
      */
     protected $dbConn = null;
     /**
@@ -89,22 +90,23 @@ class MongoDb extends BaseNoSqlDbService
 
         static::checkExtensions(['mongo']);
 
-        $config = ArrayUtils::clean(ArrayUtils::get($settings, 'config'));
+        $config = array_get($settings, 'config');
+        $config = (empty($config) ? [] : (!is_array($config) ? [$config] : $config));
         Session::replaceLookups($config, true);
 
-        $dsn = strval(ArrayUtils::get($config, 'dsn'));
+        $dsn = strval(array_get($config, 'dsn'));
         if (!empty($dsn)) {
             if (0 != substr_compare($dsn, static::DSN_PREFIX, 0, static::DSN_PREFIX_LENGTH, true)) {
                 $dsn = static::DSN_PREFIX . $dsn;
             }
         }
 
-        $options = ArrayUtils::get($config, 'options', []);
+        $options = array_get($config, 'options', []);
         if (empty($options)) {
             $options = [];
         }
-        $user = ArrayUtils::get($config, 'username');
-        $password = ArrayUtils::get($config, 'password');
+        $user = array_get($config, 'username');
+        $password = array_get($config, 'password');
 
         // support old configuration options of user, pwd, and db in credentials directly
         if (!isset($options['username']) && isset($user)) {
@@ -113,11 +115,11 @@ class MongoDb extends BaseNoSqlDbService
         if (!isset($options['password']) && isset($password)) {
             $options['password'] = $password;
         }
-        if (!isset($options['db']) && (null !== $db = ArrayUtils::get($config, 'db', null, true))) {
+        if (!isset($options['db']) && (!empty($db = array_get($config, 'db')))) {
             $options['db'] = $db;
         }
 
-        if (!isset($db) && (null === $db = ArrayUtils::get($options, 'db', null, true))) {
+        if (!isset($db) && empty($db = array_get($options, 'db'))) {
             //  Attempt to find db in connection string
             $db = strstr(substr($dsn, static::DSN_PREFIX_LENGTH), '/');
             if (false !== $pos = strpos($db, '?')) {
@@ -130,16 +132,17 @@ class MongoDb extends BaseNoSqlDbService
             throw new InternalServerErrorException("No MongoDb database selected in configuration.");
         }
 
-        $driverOptions = ArrayUtils::clean(ArrayUtils::get($config, 'driver_options'));
-        if (null !== $context = ArrayUtils::get($driverOptions, 'context')) {
+        $driverOptions = array_get($config, 'driver_options');
+        $driverOptions = (empty($driverOptions) ? [] : (!is_array($driverOptions) ? [$driverOptions] : $driverOptions));
+        if (null !== $context = array_get($driverOptions, 'context')) {
             //  Automatically creates a stream from context
             $driverOptions['context'] = stream_context_create($context);
         }
 
         try {
-            $client = @new \MongoClient($dsn, $options, $driverOptions);
+            $client = new Client($dsn, $options, $driverOptions);
 
-            $this->dbConn = $client->selectDB($db);
+            $this->dbConn = $client->selectDatabase($db);
         } catch (\Exception $ex) {
             throw new InternalServerErrorException("Unexpected MongoDb Service Exception:\n{$ex->getMessage()}");
         }
@@ -159,6 +162,7 @@ class MongoDb extends BaseNoSqlDbService
 
     /**
      * @throws \Exception
+     * @return Database
      */
     public function getConnection()
     {
@@ -169,35 +173,48 @@ class MongoDb extends BaseNoSqlDbService
         return $this->dbConn;
     }
 
+    /**
+     * @param null $schema
+     * @param bool $refresh
+     * @param bool $use_alias
+     *
+     * @return array|\DreamFactory\Core\Database\TableSchema[]|mixed
+     */
     public function getTableNames($schema = null, $refresh = false, $use_alias = false)
     {
         if ($refresh ||
             (empty($this->tableNames) &&
                 (null === $this->tableNames = $this->getFromCache('table_names')))
         ) {
-            /** @type TableSchema[] $names */
+            /** @type TableSchema[] $tables */
             $names = [];
-            $tables = $this->dbConn->getCollectionNames();
-            foreach ($tables as $table) {
-                $names[strtolower($table)] = new TableSchema(['name' => $table]);
+            $tables = [];
+            $collections = $this->dbConn->listCollections();
+            foreach ($collections as $collection) {
+                $name = $collection->getName();
+                $names[] = $name;
+                $tables[strtolower($name)] = new TableSchema(['name' => $name]);
             }
             // merge db extras
-            if (!empty($extrasEntries = $this->getSchemaExtrasForTables($tables, false))) {
+            if (!empty($extrasEntries = $this->getSchemaExtrasForTables($names, false))) {
                 foreach ($extrasEntries as $extras) {
                     if (!empty($extraName = strtolower(strval($extras['table'])))) {
                         if (array_key_exists($extraName, $tables)) {
-                            $names[$extraName]->fill($extras);
+                            $tables[$extraName]->fill($extras);
                         }
                     }
                 }
             }
-            $this->tableNames = $names;
+            $this->tableNames = $tables;
             $this->addToCache('table_names', $this->tableNames, true);
         }
 
         return $this->tableNames;
     }
 
+    /**
+     *
+     */
     public function refreshTableCache()
     {
         $this->removeFromCache('table_names');
