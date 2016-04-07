@@ -3,10 +3,10 @@
 namespace DreamFactory\MongoDb\Database;
 
 use DreamFactory\Core\Contracts\ConnectionInterface;
-use DreamFactory\Core\Database\Schema\Mongodb\Schema as MongoDbSchema;
-use Jenssegers\Mongodb\Connection;
+use DreamFactory\Core\Database\ConnectionExtension;
+use DreamFactory\MongoDb\Database\Schema\Schema as MongoDbSchema;
 
-class MongoDbConnection extends Connection implements ConnectionInterface
+class Connection extends \Jenssegers\Mongodb\Connection implements ConnectionInterface
 {
     use ConnectionExtension;
 

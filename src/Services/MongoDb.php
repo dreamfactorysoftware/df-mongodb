@@ -9,6 +9,7 @@ use DreamFactory\Core\MongoDb\Resources\Schema;
 use DreamFactory\Core\MongoDb\Resources\Table;
 use DreamFactory\Core\Services\BaseNoSqlDbService;
 use DreamFactory\Core\Utility\Session;
+use Illuminate\Database\DatabaseManager;
 use MongoDB\Client;
 use MongoDB\Database;
 
@@ -88,8 +89,6 @@ class MongoDb extends BaseNoSqlDbService
     {
         parent::__construct($settings);
 
-        static::checkExtensions(['mongo']);
-
         $config = array_get($settings, 'config');
         $config = (empty($config) ? [] : (!is_array($config) ? [$config] : $config));
         Session::replaceLookups($config, true);
@@ -138,6 +137,15 @@ class MongoDb extends BaseNoSqlDbService
             //  Automatically creates a stream from context
             $driverOptions['context'] = stream_context_create($context);
         }
+
+        // add config to global for reuse, todo check existence and update?
+        config(['database.connections.service.' . $this->name => $config]);
+        /** @type DatabaseManager $db */
+        $db = app('db');
+        $this->dbConn = $db->connection('service.' . $this->name);
+
+        $this->dbConn->setCache($this);
+        $this->dbConn->setExtraStore($this);
 
         try {
             $client = new Client($dsn, $options, $driverOptions);
