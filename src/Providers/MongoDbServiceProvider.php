@@ -1,7 +1,7 @@
 <?php
-namespace DreamFactory\MongoDb\Providers;
+namespace DreamFactory\Core\MongoDb\Providers;
 
-use DreamFactory\MongoDb\Database\Connection;
+use DreamFactory\Core\MongoDb\Database\Connection;
 use Illuminate\Support\ServiceProvider;
 use Jenssegers\Mongodb\Eloquent\Model;
 use Jenssegers\Mongodb\Queue\MongoConnector;

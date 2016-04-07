@@ -1,5 +1,5 @@
 <?php
-namespace DreamFactory\MongoDb\Database\Schema;
+namespace DreamFactory\Core\MongoDb\Database\Schema;
 
 use DreamFactory\Core\Database\ColumnSchema;
 use DreamFactory\Core\Database\TableSchema;

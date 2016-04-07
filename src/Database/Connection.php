@@ -1,10 +1,10 @@
 <?php
 
-namespace DreamFactory\MongoDb\Database;
+namespace DreamFactory\Core\MongoDb\Database;
 
 use DreamFactory\Core\Contracts\ConnectionInterface;
 use DreamFactory\Core\Database\ConnectionExtension;
-use DreamFactory\MongoDb\Database\Schema\Schema as MongoDbSchema;
+use DreamFactory\Core\MongoDb\Database\Schema\Schema as MongoDbSchema;
 
 class Connection extends \Jenssegers\Mongodb\Connection implements ConnectionInterface
 {
