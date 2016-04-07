@@ -3,6 +3,9 @@ namespace DreamFactory\Core\MongoDb\Services;
 
 use DreamFactory\Core\Components\DbSchemaExtras;
 use DreamFactory\Core\Components\RequireExtensions;
+use DreamFactory\Core\Contracts\CacheInterface;
+use DreamFactory\Core\Contracts\ConnectionInterface;
+use DreamFactory\Core\Contracts\DbExtrasInterface;
 use DreamFactory\Core\Database\TableSchema;
 use DreamFactory\Core\Exceptions\InternalServerErrorException;
 use DreamFactory\Core\MongoDb\Resources\Schema;
@@ -19,7 +22,7 @@ use MongoDB\Database;
  * A service to handle MongoDB NoSQL (schema-less) database
  * services accessed through the REST API.
  */
-class MongoDb extends BaseNoSqlDbService
+class MongoDb extends BaseNoSqlDbService implements CacheInterface, DbExtrasInterface
 {
     //*************************************************************************
     //	Traits
@@ -93,6 +96,7 @@ class MongoDb extends BaseNoSqlDbService
         $config = (empty($config) ? [] : (!is_array($config) ? [$config] : $config));
         Session::replaceLookups($config, true);
 
+        $config['driver'] = 'mongodb';
         $dsn = strval(array_get($config, 'dsn'));
         if (!empty($dsn)) {
             if (0 != substr_compare($dsn, static::DSN_PREFIX, 0, static::DSN_PREFIX_LENGTH, true)) {
@@ -131,6 +135,10 @@ class MongoDb extends BaseNoSqlDbService
             throw new InternalServerErrorException("No MongoDb database selected in configuration.");
         }
 
+        if (!isset($config['database'])) {
+            $config['database'] = $db;
+        }
+
         $driverOptions = array_get($config, 'driver_options');
         $driverOptions = (empty($driverOptions) ? [] : (!is_array($driverOptions) ? [$driverOptions] : $driverOptions));
         if (null !== $context = array_get($driverOptions, 'context')) {
@@ -142,18 +150,21 @@ class MongoDb extends BaseNoSqlDbService
         config(['database.connections.service.' . $this->name => $config]);
         /** @type DatabaseManager $db */
         $db = app('db');
-        $this->dbConn = $db->connection('service.' . $this->name);
+        /** @type ConnectionInterface $client */
+        $client = $db->connection('service.' . $this->name);
 
-        $this->dbConn->setCache($this);
-        $this->dbConn->setExtraStore($this);
+        $client->setCache($this);
+        $client->setExtraStore($this);
 
-        try {
-            $client = new Client($dsn, $options, $driverOptions);
+        $this->dbConn = $client->getMongoDb();
 
-            $this->dbConn = $client->selectDatabase($db);
-        } catch (\Exception $ex) {
-            throw new InternalServerErrorException("Unexpected MongoDb Service Exception:\n{$ex->getMessage()}");
-        }
+//        try {
+//            $client = new Client($dsn, $options, $driverOptions);
+//
+//            $this->dbConn = $client->selectDatabase($db);
+//        } catch (\Exception $ex) {
+//            throw new InternalServerErrorException("Unexpected MongoDb Service Exception:\n{$ex->getMessage()}");
+//        }
     }
 
     /**
