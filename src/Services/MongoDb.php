@@ -178,7 +178,7 @@ class MongoDb extends BaseNoSqlDbService
      * @param bool $refresh
      * @param bool $use_alias
      *
-     * @return array|\DreamFactory\Core\Database\TableSchema[]|mixed
+     * @return array|TableSchema[]|mixed
      */
     public function getTableNames($schema = null, $refresh = false, $use_alias = false)
     {

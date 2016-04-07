@@ -11,7 +11,6 @@ use DreamFactory\Core\Exceptions\NotFoundException;
 use DreamFactory\Core\Exceptions\RestException;
 use DreamFactory\Core\MongoDb\Services\MongoDb;
 use DreamFactory\Core\Resources\BaseDbTableResource;
-use DreamFactory\Core\Utility\DbUtilities;
 use DreamFactory\Core\Utility\ResourcesWrapper;
 use DreamFactory\Core\Utility\Session;
 use DreamFactory\Library\Utility\Enums\Verbs;
@@ -78,7 +77,7 @@ class Table extends BaseDbTableResource
      */
     public function updateRecordsByFilter($table, $record, $filter = null, $params = [], $extras = [])
     {
-        $record = DbUtilities::validateAsArray($record, null, false, 'There are no fields in the record.');
+        $record = static::validateAsArray($record, null, false, 'There are no fields in the record.');
         $coll = $this->selectTable($table);
 
         $fields = array_get($extras, ApiOptions::FIELDS);
@@ -113,7 +112,7 @@ class Table extends BaseDbTableResource
      */
     public function patchRecordsByFilter($table, $record, $filter = null, $params = [], $extras = [])
     {
-        $record = DbUtilities::validateAsArray($record, null, false, 'There are no fields in the record.');
+        $record = static::validateAsArray($record, null, false, 'There are no fields in the record.');
         $coll = $this->selectTable($table);
 
         $fields = array_get($extras, ApiOptions::FIELDS);

@@ -1,6 +1,8 @@
 <?php
 namespace DreamFactory\Core\MongoDb\Resources;
 
+use DreamFactory\Core\Database\ColumnSchema;
+use DreamFactory\Core\Database\TableSchema;
 use DreamFactory\Core\Exceptions\BadRequestException;
 use DreamFactory\Core\Exceptions\InternalServerErrorException;
 use DreamFactory\Core\Resources\BaseNoSqlDbSchemaResource;
@@ -51,19 +53,27 @@ class Schema extends BaseNoSqlDbSchemaResource
 
         try {
             $collection = $this->selectTable($name);
-            $indexes = [];
-            foreach ($collection->listIndexes() as $index) {
-                $indexes[] = $index->__debugInfo();
-            }
-            $out =
-                [
-                    'name'      => $collection->getCollectionName(),
-                    'namespace' => $collection->getNamespace(),
-                    'indexes'   => $indexes,
-                    'access' => $this->getPermissions($name)
-                ];
+            $table =
+                new TableSchema([
+                    'schemaName' => $collection->getDatabaseName(),
+                    'tableName'  => $collection->getCollectionName(),
+                    'name'       => $collection->getCollectionName(),
+                    'primaryKey' => '_id',
+                ]);
 
-            return $out;
+            $c = new ColumnSchema(['name' => '_id', 'isPrimaryKey' => true, 'autoIncrement' => true]);
+            $table->addColumn($c);
+
+            $result = $table->toArray();
+            $result['access'] = $this->getPermissions($name);
+
+//            $indexes = [];
+//            foreach ($collection->listIndexes() as $index) {
+//                $indexes[] = $index->__debugInfo();
+//            }
+//            $result['indexes'] = $indexes;
+
+            return $result;
         } catch (\Exception $ex) {
             throw new InternalServerErrorException(
                 "Failed to get table properties for table '$name'.\n{$ex->getMessage()}"
