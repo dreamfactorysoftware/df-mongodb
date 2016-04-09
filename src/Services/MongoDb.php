@@ -4,8 +4,8 @@ namespace DreamFactory\Core\MongoDb\Services;
 use DreamFactory\Core\Components\DbSchemaExtras;
 use DreamFactory\Core\Components\RequireExtensions;
 use DreamFactory\Core\Contracts\CacheInterface;
-use DreamFactory\Core\Contracts\ConnectionInterface;
 use DreamFactory\Core\Contracts\DbExtrasInterface;
+use DreamFactory\Core\Contracts\SchemaInterface;
 use DreamFactory\Core\Database\TableSchema;
 use DreamFactory\Core\Exceptions\InternalServerErrorException;
 use DreamFactory\Core\MongoDb\Resources\Schema;
@@ -13,8 +13,7 @@ use DreamFactory\Core\MongoDb\Resources\Table;
 use DreamFactory\Core\Services\BaseNoSqlDbService;
 use DreamFactory\Core\Utility\Session;
 use Illuminate\Database\DatabaseManager;
-use MongoDB\Client;
-use MongoDB\Database;
+use Jenssegers\Mongodb\Connection;
 
 /**
  * MongoDb
@@ -28,8 +27,7 @@ class MongoDb extends BaseNoSqlDbService implements CacheInterface, DbExtrasInte
     //	Traits
     //*************************************************************************
 
-    use RequireExtensions;
-    use DbSchemaExtras;
+    use DbSchemaExtras, RequireExtensions;
 
     //*************************************************************************
     //	Constants
@@ -49,9 +47,13 @@ class MongoDb extends BaseNoSqlDbService implements CacheInterface, DbExtrasInte
     //*************************************************************************
 
     /**
-     * @var Database
+     * @var Connection
      */
     protected $dbConn = null;
+    /**
+     * @var SchemaInterface
+     */
+    protected $schema = null;
     /**
      * @var array
      */
@@ -150,21 +152,11 @@ class MongoDb extends BaseNoSqlDbService implements CacheInterface, DbExtrasInte
         config(['database.connections.service.' . $this->name => $config]);
         /** @type DatabaseManager $db */
         $db = app('db');
-        /** @type ConnectionInterface $client */
-        $client = $db->connection('service.' . $this->name);
+        $this->dbConn = $db->connection('service.' . $this->name);
+        $this->schema = new \DreamFactory\Core\MongoDb\Database\Schema\Schema($this->dbConn);
 
-        $client->setCache($this);
-        $client->setExtraStore($this);
-
-        $this->dbConn = $client->getMongoDb();
-
-//        try {
-//            $client = new Client($dsn, $options, $driverOptions);
-//
-//            $this->dbConn = $client->selectDatabase($db);
-//        } catch (\Exception $ex) {
-//            throw new InternalServerErrorException("Unexpected MongoDb Service Exception:\n{$ex->getMessage()}");
-//        }
+        $this->schema->setCache($this);
+        $this->schema->setExtraStore($this);
     }
 
     /**
@@ -181,7 +173,7 @@ class MongoDb extends BaseNoSqlDbService implements CacheInterface, DbExtrasInte
 
     /**
      * @throws \Exception
-     * @return Database
+     * @return Connection
      */
     public function getConnection()
     {
@@ -193,6 +185,19 @@ class MongoDb extends BaseNoSqlDbService implements CacheInterface, DbExtrasInte
     }
 
     /**
+     * @throws \Exception
+     * @return SchemaInterface
+     */
+    public function getSchema()
+    {
+        if (!isset($this->schema)) {
+            throw new InternalServerErrorException('Database schema extension has not been initialized.');
+        }
+
+        return $this->schema;
+    }
+
+    /**
      * @param null $schema
      * @param bool $refresh
      * @param bool $use_alias
@@ -201,43 +206,22 @@ class MongoDb extends BaseNoSqlDbService implements CacheInterface, DbExtrasInte
      */
     public function getTableNames($schema = null, $refresh = false, $use_alias = false)
     {
-        if ($refresh ||
-            (empty($this->tableNames) &&
-                (null === $this->tableNames = $this->getFromCache('table_names')))
-        ) {
-            /** @type TableSchema[] $tables */
-            $names = [];
-            $tables = [];
-            $collections = $this->dbConn->listCollections();
-            foreach ($collections as $collection) {
-                $name = $collection->getName();
-                $names[] = $name;
-                $tables[strtolower($name)] = new TableSchema(['name' => $name]);
+        /** @type TableSchema[] $tables */
+        $tables = $this->schema->getTableNames($schema, true, $refresh);
+        if ($use_alias) {
+            $temp = []; // reassign index to alias
+            foreach ($tables as $table) {
+                $temp[strtolower($table->getName(true))] = $table;
             }
-            // merge db extras
-            if (!empty($extrasEntries = $this->getSchemaExtrasForTables($names, false))) {
-                foreach ($extrasEntries as $extras) {
-                    if (!empty($extraName = strtolower(strval($extras['table'])))) {
-                        if (array_key_exists($extraName, $tables)) {
-                            $tables[$extraName]->fill($extras);
-                        }
-                    }
-                }
-            }
-            $this->tableNames = $tables;
-            $this->addToCache('table_names', $this->tableNames, true);
+
+            return $temp;
         }
 
-        return $this->tableNames;
+        return $tables;
     }
 
-    /**
-     *
-     */
     public function refreshTableCache()
     {
-        $this->removeFromCache('table_names');
-        $this->tableNames = [];
-        $this->tables = [];
+        $this->schema->refresh();
     }
 }

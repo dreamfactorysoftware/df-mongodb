@@ -67,7 +67,7 @@ class Table extends BaseDbTableResource
      */
     public function selectTable($name)
     {
-        $coll = $this->parent->getConnection()->selectCollection($name);
+        $coll = $this->parent->getConnection()->getCollection($name);
 
         return $coll;
     }

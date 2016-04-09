@@ -1,10 +1,10 @@
 <?php
 namespace DreamFactory\Core\MongoDb\Resources;
 
-use DreamFactory\Core\Database\ColumnSchema;
-use DreamFactory\Core\Database\TableSchema;
 use DreamFactory\Core\Exceptions\BadRequestException;
 use DreamFactory\Core\Exceptions\InternalServerErrorException;
+use DreamFactory\Core\Exceptions\NotFoundException;
+use DreamFactory\Core\Exceptions\RestException;
 use DreamFactory\Core\Resources\BaseNoSqlDbSchemaResource;
 use DreamFactory\Core\MongoDb\Services\MongoDb;
 use MongoDB\Collection;
@@ -39,7 +39,7 @@ class Schema extends BaseNoSqlDbSchemaResource
      */
     public function selectTable($name)
     {
-        $coll = $this->parent->getConnection()->selectCollection($name);
+        $coll = $this->parent->getConnection()->getCollection($name);
 
         return $coll;
     }
@@ -52,32 +52,19 @@ class Schema extends BaseNoSqlDbSchemaResource
         $name = (is_array($table)) ? array_get($table, 'name') : $table;
 
         try {
-            $collection = $this->selectTable($name);
-            $table =
-                new TableSchema([
-                    'schemaName' => $collection->getDatabaseName(),
-                    'tableName'  => $collection->getCollectionName(),
-                    'name'       => $collection->getCollectionName(),
-                    'primaryKey' => '_id',
-                ]);
-
-            $c = new ColumnSchema(['name' => '_id', 'isPrimaryKey' => true, 'autoIncrement' => true]);
-            $table->addColumn($c);
+            $table = $this->parent->getSchema()->getTable($name, $refresh);
+            if (!$table) {
+                throw new NotFoundException("Table '$name' does not exist in the database.");
+            }
 
             $result = $table->toArray();
             $result['access'] = $this->getPermissions($name);
 
-//            $indexes = [];
-//            foreach ($collection->listIndexes() as $index) {
-//                $indexes[] = $index->__debugInfo();
-//            }
-//            $result['indexes'] = $indexes;
-
             return $result;
+        } catch (RestException $ex) {
+            throw $ex;
         } catch (\Exception $ex) {
-            throw new InternalServerErrorException(
-                "Failed to get table properties for table '$name'.\n{$ex->getMessage()}"
-            );
+            throw new InternalServerErrorException("Failed to query database schema.\n{$ex->getMessage()}");
         }
     }
 
@@ -90,14 +77,22 @@ class Schema extends BaseNoSqlDbSchemaResource
             throw new BadRequestException("No 'name' field in data.");
         }
 
-        try {
-            $result = $this->parent->getConnection()->createCollection($table);
-            $this->refreshCachedTables();
+        $properties = (is_array($properties) ? $properties : []);
 
-            return $this->describeTable($table);
+        try {
+            $this->parent->getConnection()->getMongoDB()->createCollection($table, $properties);
         } catch (\Exception $ex) {
             throw new InternalServerErrorException("Failed to create table '$table'.\n{$ex->getMessage()}");
         }
+
+        //  Any changes here should refresh cached schema
+        $this->refreshCachedTables();
+
+        if ($return_schema) {
+            return $this->describeTable($table);
+        }
+
+        return ['name' => $table];
     }
 
     /**
