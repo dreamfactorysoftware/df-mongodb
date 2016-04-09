@@ -82,6 +82,48 @@ class MongoDb extends BaseNoSqlDbService implements CacheInterface, DbExtrasInte
     //	Methods
     //*************************************************************************
 
+    public static function adaptConfig(array &$config)
+    {
+        $dsn = isset($config['dsn']) ? $config['dsn'] : null;
+        if (!empty($dsn)) {
+            // default PDO DSN pieces
+            $dsn = str_replace(' ', '', $dsn);
+            if (!isset($config['port']) && (false !== ($pos = strpos($dsn, 'port=')))) {
+                $temp = substr($dsn, $pos + 5);
+                $config['port'] = (false !== $pos = strpos($temp, ';')) ? substr($temp, 0, $pos) : $temp;
+            }
+            if (!isset($config['host']) && (false !== ($pos = strpos($dsn, 'host=')))) {
+                $temp = substr($dsn, $pos + 5);
+                $host = (false !== $pos = stripos($temp, ';')) ? substr($temp, 0, $pos) : $temp;
+                if (!isset($config['port']) && (false !== ($pos = stripos($host, ':')))) {
+                    $temp = substr($host, $pos + 1);
+                    $host = substr($host, 0, $pos);
+                    $config['port'] = (false !== $pos = stripos($temp, ';')) ? substr($temp, 0, $pos) : $temp;
+                }
+                $config['host'] = $host;
+            }
+            if (!isset($config['database']) && (false !== ($pos = strpos($dsn, 'dbname=')))) {
+                $temp = substr($dsn, $pos + 7);
+                $config['database'] = (false !== $pos = strpos($temp, ';')) ? substr($temp, 0, $pos) : $temp;
+            }
+        }
+
+        // must be there
+        if (!array_key_exists('database', $config)) {
+            $config['database'] = null;
+        }
+
+        // must be there
+        if (!array_key_exists('prefix', $config)) {
+            $config['prefix'] = null;
+        }
+
+        // laravel database config requires options to be [], not null
+        if (array_key_exists('options', $config) && is_null($config['options'])) {
+            $config['options'] = [];
+        }
+    }
+
     /**
      * Create a new MongoDbSvc
      *
@@ -147,6 +189,8 @@ class MongoDb extends BaseNoSqlDbService implements CacheInterface, DbExtrasInte
             //  Automatically creates a stream from context
             $driverOptions['context'] = stream_context_create($context);
         }
+
+        static::adaptConfig($config);
 
         // add config to global for reuse, todo check existence and update?
         config(['database.connections.service.' . $this->name => $config]);
