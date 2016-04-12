@@ -810,12 +810,24 @@ class Table extends BaseDbTableResource
         }
 
         if (is_string($value)) {
+            $quoted = false;
+            if (trim($value, "'\"") !== $value) {
+                $value = trim($value, "'\""); // meant to be a string
+                $quoted = true;
+            }
             if ((24 == strlen($value))) {
                 try {
                     $temp = new ObjectID($value);
                     $value = $temp;
                 } catch (\Exception $ex) {
                     // obviously not a Mongo created Id, let it be
+                    if ($quoted) {
+                        $value = "'$value'";
+                    }
+                }
+            } else {
+                if ($quoted) {
+                    $value = "'$value'";
                 }
             }
         }
