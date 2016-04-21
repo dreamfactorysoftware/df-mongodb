@@ -112,6 +112,9 @@ class Schema extends \DreamFactory\Core\Database\Schema\Schema
             }
         }
 
+        if (!is_array($options)){
+            $options = [];
+        }
         $this->connection->getMongoDB()->createCollection($table, $options);
 
         return $results;
@@ -264,6 +267,21 @@ class Schema extends \DreamFactory\Core\Database\Schema\Schema
         }
 
         return ['names' => $names];
+    }
+
+    protected function createFieldReferences($references)
+    {
+        // Do nothing here for now
+    }
+
+    /**
+     * @param array $indexes
+     *
+     * @return array
+     */
+    protected function createFieldIndexes($indexes)
+    {
+        // Do nothing here for now
     }
 
     public function parseValueForSet($value, $field_info)
