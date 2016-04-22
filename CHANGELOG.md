@@ -9,6 +9,18 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+## [0.2.2] - 2016-04-22
+### Added
+- Schema changes to support virtual relationships to SQL DB services
+
+### Changed
+- Switched to use jensseger connection classes.
+- Rework schema to be like SQL DB connections
+
+### Fixed
+- Use a service provider 
+- Handle quoted identifiers 
+
 ## [0.2.1] - 2016-03-08
 ### Added
 - Support for "contains", "starts with", and "ends with" SQL-like filter operators
