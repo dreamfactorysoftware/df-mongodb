@@ -5,17 +5,24 @@ use DreamFactory\Core\Database\ColumnSchema;
 use DreamFactory\Core\Enums\ApiOptions;
 use DreamFactory\Core\Enums\DbComparisonOperators;
 use DreamFactory\Core\Enums\DbLogicalOperators;
-use DreamFactory\Core\Utility\ResourcesWrapper;
-use DreamFactory\Core\Utility\Session;
-use DreamFactory\Library\Utility\ArrayUtils;
-use DreamFactory\Library\Utility\Enums\Verbs;
 use DreamFactory\Core\Exceptions\BadRequestException;
 use DreamFactory\Core\Exceptions\InternalServerErrorException;
 use DreamFactory\Core\Exceptions\NotFoundException;
 use DreamFactory\Core\Exceptions\RestException;
-use DreamFactory\Core\Resources\BaseDbTableResource;
-use DreamFactory\Core\Utility\DbUtilities;
 use DreamFactory\Core\MongoDb\Services\MongoDb;
+use DreamFactory\Core\Resources\BaseDbTableResource;
+use DreamFactory\Core\Utility\ResourcesWrapper;
+use DreamFactory\Core\Utility\Session;
+use DreamFactory\Library\Utility\Enums\Verbs;
+use DreamFactory\Library\Utility\Scalar;
+use MongoDB\BSON\Binary;
+use MongoDB\BSON\ObjectID;
+use MongoDB\BSON\Timestamp;
+use MongoDB\BSON\UTCDatetime;
+use MongoDB\Collection;
+use MongoDB\Model\BSONDocument;
+use MongoDB\Operation\FindOneAndReplace;
+use MongoDB\Operation\FindOneAndUpdate;
 
 class Table extends BaseDbTableResource
 {
@@ -37,7 +44,7 @@ class Table extends BaseDbTableResource
      */
     protected $parent = null;
     /**
-     * @var \MongoCollection
+     * @var Collection
      */
     protected $collection = null;
 
@@ -56,11 +63,11 @@ class Table extends BaseDbTableResource
     /**
      * @param $name
      *
-     * @return \MongoCollection|null
+     * @return Collection|null
      */
     public function selectTable($name)
     {
-        $coll = $this->parent->getConnection()->selectCollection($name);
+        $coll = $this->parent->getConnection()->getCollection($name);
 
         return $coll;
     }
@@ -70,16 +77,14 @@ class Table extends BaseDbTableResource
      */
     public function updateRecordsByFilter($table, $record, $filter = null, $params = [], $extras = [])
     {
-        $record = DbUtilities::validateAsArray($record, null, false, 'There are no fields in the record.');
+        $record = static::validateAsArray($record, null, false, 'There are no fields in the record.');
         $coll = $this->selectTable($table);
 
-        $fields = ArrayUtils::get($extras, ApiOptions::FIELDS);
-        $ssFilters = ArrayUtils::get($extras, 'ss_filters');
-
-        $fieldsInfo = $this->getFieldsInfo($table);
-        $fieldArray = static::buildFieldArray($fields);
+        $fields = array_get($extras, ApiOptions::FIELDS);
+        $ssFilters = array_get($extras, 'ss_filters');
 
         static::removeIds($record, static::DEFAULT_ID_FIELD);
+        $fieldsInfo = $this->getFieldsInfo($table);
         $parsed = $this->parseRecord($record, $fieldsInfo, $ssFilters, true);
         if (empty($parsed)) {
             throw new BadRequestException('No valid fields found in request: ' . print_r($record, true));
@@ -89,14 +94,11 @@ class Table extends BaseDbTableResource
         $criteria = static::buildCriteriaArray($filter, $params, $ssFilters);
 
         try {
-            $result = $coll->update($criteria, $parsed, ['multiple' => true]);
-            $rows = static::processResult($result);
-            if ($rows > 0) {
-                /** @var \MongoCursor $result */
-                $result = $coll->find($criteria, $fieldArray);
-                $out = iterator_to_array($result);
+            $result = $coll->updateMany($criteria, $parsed);
+            if ($result->getMatchedCount() > 0) {
+                $result = $coll->find($criteria, ['projection' => static::buildProjection($fields)]);
 
-                return static::cleanRecords($out);
+                return static::cleanRecords($result->toArray());
             }
 
             return [];
@@ -110,16 +112,14 @@ class Table extends BaseDbTableResource
      */
     public function patchRecordsByFilter($table, $record, $filter = null, $params = [], $extras = [])
     {
-        $record = DbUtilities::validateAsArray($record, null, false, 'There are no fields in the record.');
+        $record = static::validateAsArray($record, null, false, 'There are no fields in the record.');
         $coll = $this->selectTable($table);
 
-        $fields = ArrayUtils::get($extras, ApiOptions::FIELDS);
-        $ssFilters = ArrayUtils::get($extras, 'ss_filters');
-
-        $fieldsInfo = $this->getFieldsInfo($table);
-        $fieldArray = static::buildFieldArray($fields);
+        $fields = array_get($extras, ApiOptions::FIELDS);
+        $ssFilters = array_get($extras, 'ss_filters');
 
         static::removeIds($record, static::DEFAULT_ID_FIELD);
+        $fieldsInfo = $this->getFieldsInfo($table);
         if (!static::doesRecordContainModifier($record)) {
             $parsed = $this->parseRecord($record, $fieldsInfo, $ssFilters, true);
             if (empty($parsed)) {
@@ -138,14 +138,11 @@ class Table extends BaseDbTableResource
         $criteria = static::buildCriteriaArray($filter, $params, $ssFilters);
 
         try {
-            $result = $coll->update($criteria, $parsed, ['multiple' => true]);
-            $rows = static::processResult($result);
-            if ($rows > 0) {
-                /** @var \MongoCursor $result */
-                $result = $coll->find($criteria, $fieldArray);
-                $out = iterator_to_array($result);
+            $result = $coll->updateMany($criteria, $parsed);
+            if ($result->getMatchedCount() > 0) {
+                $result = $coll->find($criteria, ['projection' => static::buildProjection($fields)]);
 
-                return static::cleanRecords($out);
+                return static::cleanRecords($result->toArray());
             }
 
             return [];
@@ -162,9 +159,9 @@ class Table extends BaseDbTableResource
         $coll = $this->selectTable($table);
         try {
             // build filter string if necessary, add server-side filters if necessary
-            $ssFilters = ArrayUtils::get($extras, 'ss_filters');
+            $ssFilters = array_get($extras, 'ss_filters');
             $criteria = $this->buildCriteriaArray([], null, $ssFilters);
-            $coll->remove($criteria);
+            $coll->deleteMany($criteria);
 
             return ['success' => true];
         } catch (RestException $ex) {
@@ -185,21 +182,17 @@ class Table extends BaseDbTableResource
 
         $coll = $this->selectTable($table);
 
-        $fields = ArrayUtils::get($extras, ApiOptions::FIELDS);
-        $ssFilters = ArrayUtils::get($extras, 'ss_filters');
-
-        $fieldArray = static::buildFieldArray($fields);
+        $fields = array_get($extras, ApiOptions::FIELDS);
+        $ssFilters = array_get($extras, 'ss_filters');
 
         // build criteria from filter parameters
         $criteria = static::buildCriteriaArray($filter, $params, $ssFilters);
 
         try {
-            /** @var \MongoCursor $result */
-            $result = $coll->find($criteria, $fieldArray);
-            $out = iterator_to_array($result);
-            $coll->remove($criteria);
+            $result = $coll->find($criteria, ['projection' => static::buildProjection($fields)]);
+            $coll->deleteMany($criteria);
 
-            return static::cleanRecords($out);
+            return static::cleanRecords($result->toArray());
         } catch (\Exception $ex) {
             throw new InternalServerErrorException("Failed to delete records from '$table'.\n{$ex->getMessage()}");
         }
@@ -212,35 +205,35 @@ class Table extends BaseDbTableResource
     {
         $coll = $this->selectTable($table);
 
-        $fields = ArrayUtils::get($extras, ApiOptions::FIELDS);
-        $ssFilters = ArrayUtils::get($extras, 'ss_filters');
+        $fields = array_get($extras, ApiOptions::FIELDS);
+        $ssFilters = array_get($extras, 'ss_filters');
 
-        $fieldArray = static::buildFieldArray($fields);
         $criteria = static::buildCriteriaArray($filter, $params, $ssFilters);
 
-        $limit = intval(ArrayUtils::get($extras, ApiOptions::LIMIT, 0));
-        $offset = intval(ArrayUtils::get($extras, ApiOptions::OFFSET, 0));
-        $sort = static::buildSortArray(ArrayUtils::get($extras, ApiOptions::ORDER));
-        $addCount = ArrayUtils::getBool($extras, ApiOptions::INCLUDE_COUNT, false);
+        $limit = intval(array_get($extras, ApiOptions::LIMIT, 0));
+        $offset = intval(array_get($extras, ApiOptions::OFFSET, 0));
+        $sort = static::buildSortArray(array_get($extras, ApiOptions::ORDER));
+        $addCount = Scalar::boolval(array_get($extras, ApiOptions::INCLUDE_COUNT, false));
 
         try {
-            /** @var \MongoCursor $result */
-            $result = $coll->find($criteria, $fieldArray);
-            $count = $result->count();
             $maxAllowed = static::getMaxRecordsReturnedLimit();
+            $options = [];
             if ($offset) {
-                $result = $result->skip($offset);
+                $options['skip'] = $offset;
             }
             if ($sort) {
-                $result = $result->sort($sort);
+                $options['sort'] = $sort;
             }
             if (($limit < 1) || ($limit > $maxAllowed)) {
                 $limit = $maxAllowed;
             }
-            $result = $result->limit($limit);
+            $options['limit'] = $limit;
+            $options['projection'] = static::buildProjection($fields);
+            $options['typeMap'] = ['root' => 'array', 'document' => 'array'];
 
-            $out = iterator_to_array($result);
-            $out = static::cleanRecords($out);
+            $count = $coll->count($criteria);
+            $result = $coll->find($criteria, $options);
+            $out = static::cleanRecords($result->toArray());
             $needMore = (($count - $offset) > $limit);
             if ($addCount || $needMore) {
                 $out['meta']['count'] = $count;
@@ -266,8 +259,9 @@ class Table extends BaseDbTableResource
     protected function getIdsInfo($table, $fields_info = null, &$requested_fields = null, $requested_types = null)
     {
         $requested_fields = static::DEFAULT_ID_FIELD; // can only be this
-        $requested_types = ArrayUtils::clean($requested_types);
-        $type = ArrayUtils::get($requested_types, 0, 'string');
+        $requested_types =
+            (empty($requested_types) ? [] : (!is_array($requested_types) ? [$requested_types] : $requested_types));
+        $type = array_get($requested_types, 0, 'string');
         $type = (empty($type)) ? 'string' : $type;
 
         return [new ColumnSchema(['name' => static::DEFAULT_ID_FIELD, 'type' => $type, 'required' => false])];
@@ -294,12 +288,12 @@ class Table extends BaseDbTableResource
     /**
      * @param string|array $include List of keys to include in the output record
      *
-     * @return array
+     * @return null|array
      */
-    protected static function buildFieldArray($include = '*')
+    protected static function buildProjection($include = '*')
     {
         if ('*' == $include) {
-            return [];
+            return null;
         }
 
         if (empty($include)) {
@@ -314,7 +308,7 @@ class Table extends BaseDbTableResource
 
         $out = [];
         foreach ($include as $key) {
-            $out[$key] = true;
+            $out[$key] = 1;
         }
 
         return $out;
@@ -346,13 +340,13 @@ class Table extends BaseDbTableResource
             case DbComparisonOperators::GT:
                 return '$gt';
             case DbComparisonOperators::GTE_STR:
-                case DbComparisonOperators::GTE:
+            case DbComparisonOperators::GTE:
                 return '$gte';
             case DbComparisonOperators::LT_STR:
-                case DbComparisonOperators::LT:
+            case DbComparisonOperators::LT:
                 return '$lt';
             case DbComparisonOperators::LTE_STR:
-                case DbComparisonOperators::LTE:
+            case DbComparisonOperators::LTE:
                 return '$lte';
             case DbComparisonOperators::IN:
                 return '$in';
@@ -401,7 +395,7 @@ class Table extends BaseDbTableResource
                     $left = static::buildFilterArray($left, $params);
                     $right = static::buildFilterArray($right, $params);
 
-                    return [static::localizeOperator($logicalOp) => [$left,$right]];
+                    return [static::localizeOperator($logicalOp) => [$left, $right]];
                 }
                 // (a = 1)AND(b = 2) format
                 $paddedOp = ')' . $logicalOp . '(';
@@ -411,7 +405,7 @@ class Table extends BaseDbTableResource
                     $left = static::buildFilterArray($left, $params);
                     $right = static::buildFilterArray($right, $params);
 
-                    return [static::localizeOperator($logicalOp) => [$left,$right]];
+                    return [static::localizeOperator($logicalOp) => [$left, $right]];
                 }
             }
         }
@@ -511,7 +505,7 @@ class Table extends BaseDbTableResource
      * @param string $field
      * @param array  $replacements
      *
-     * @return bool|float|int|string|\MongoId
+     * @return bool|float|int|string|ObjectID
      */
     private static function determineValue($value, $field = null, $replacements = null)
     {
@@ -595,22 +589,22 @@ class Table extends BaseDbTableResource
         }
 
         // build the server side criteria
-        $filters = ArrayUtils::get($ss_filters, 'filters');
+        $filters = array_get($ss_filters, 'filters');
         if (empty($filters)) {
             return null;
         }
 
         $criteria = [];
-        $combiner = ArrayUtils::get($ss_filters, 'filter_op', 'and');
+        $combiner = array_get($ss_filters, 'filter_op', 'and');
         foreach ($filters as $filter) {
-            $name = ArrayUtils::get($filter, 'name');
-            $op = ArrayUtils::get($filter, 'operator');
+            $name = array_get($filter, 'name');
+            $op = array_get($filter, 'operator');
             if (empty($name) || empty($op)) {
                 // log and bail
                 throw new InternalServerErrorException('Invalid server-side filter configuration detected.');
             }
 
-            $value = ArrayUtils::get($filter, 'value');
+            $value = array_get($filter, 'value');
             $value = static::interpretFilterValue($value);
 
             $criteria[] = static::buildFilterArray("$name $op $value");
@@ -684,37 +678,48 @@ class Table extends BaseDbTableResource
     }
 
     /**
-     * @param array        $record
-     * @param string|array $include List of keys to include in the output record
-     * @param string|array $id_field
+     * @param array|object|BSONDocument $record
+     * @param string|array              $include List of keys to include in the output record
+     * @param string|array              $id_field
      *
      * @return array
      */
     protected static function cleanRecord($record = [], $include = '*', $id_field = null)
     {
+        if ($record instanceof BSONDocument) {
+            $record = $record->getArrayCopy();
+        } elseif (is_object($record)) {
+            $record = (array)$record; // std object
+        }
         $out = parent::cleanRecord($record, $include, $id_field);
 
         return static::fromMongoObjects($out);
     }
 
     /**
-     * @param array $record
+     * @param array|object|BSONDocument $record
      *
      * @return array|string
      */
-    protected static function fromMongoObjects(array $record)
+    protected static function fromMongoObjects($record)
     {
+        if ($record instanceof BSONDocument) {
+            $record = $record->getArrayCopy();
+        } elseif (is_object($record)) {
+            $record = (array)$record; // std object
+        }
         if (!empty($record)) {
             foreach ($record as &$data) {
                 if (is_object($data)) {
-                    if ($data instanceof \MongoId) {
-                        $data = $data->__toString();
-                    } elseif ($data instanceof \MongoDate) {
-//                        $data = $data->__toString();
-                        $data = ['$date' => date(DATE_ISO8601, $data->sec)];
-                    } elseif ($data instanceof \MongoBinData) {
+                    if ($data instanceof ObjectID) {
                         $data = (string)$data;
-                    } elseif ($data instanceof \MongoDBRef) {
+                    } elseif ($data instanceof Timestamp) {
+                        $data = (string)$data;
+                    } elseif ($data instanceof UTCDatetime) {
+                        $data = $data->toDateTime();
+                        $data = ['$date' => $data];
+                    } elseif ($data instanceof Binary) {
+                        $data = $data->getData();
                     }
                 }
             }
@@ -770,7 +775,7 @@ class Table extends BaseDbTableResource
     protected static function mongoIdToId($value)
     {
         if (is_object($value)) {
-            /** $record \MongoId */
+            /** $record ObjectID */
             $value = (string)$value;
         }
 
@@ -794,23 +799,35 @@ class Table extends BaseDbTableResource
     /**
      * @param mixed $value
      *
-     * @return array|bool|float|int|\MongoId|string
+     * @return array|bool|float|int|ObjectID|string
      */
     protected static function idToMongoId($value)
     {
         if (is_array($value)) {
             if (array_key_exists('$id', $value)) {
-                $value = ArrayUtils::get($value, '$id');
+                $value = array_get($value, '$id');
             }
         }
 
         if (is_string($value)) {
+            $quoted = false;
+            if (trim($value, "'\"") !== $value) {
+                $value = trim($value, "'\""); // meant to be a string
+                $quoted = true;
+            }
             if ((24 == strlen($value))) {
                 try {
-                    $temp = new \MongoId($value);
+                    $temp = new ObjectID($value);
                     $value = $temp;
                 } catch (\Exception $ex) {
                     // obviously not a Mongo created Id, let it be
+                    if ($quoted) {
+                        $value = "'$value'";
+                    }
+                }
+            } else {
+                if ($quoted) {
+                    $value = "'$value'";
                 }
             }
         }
@@ -870,26 +887,6 @@ class Table extends BaseDbTableResource
     }
 
     /**
-     * @param $result
-     *
-     * @return int Number of affected records
-     * @throws InternalServerErrorException
-     */
-    protected static function processResult($result)
-    {
-        if (!is_array($result) || empty($result)) {
-            throw new InternalServerErrorException('MongoDb did not return an array, check configuration.');
-        }
-
-        $errorMsg = ArrayUtils::get($result, 'err');
-        if (!empty($errorMsg)) {
-            throw new InternalServerErrorException('MongoDb error:' . $errorMsg);
-        }
-
-        return ArrayUtils::get($result, 'n');
-    }
-
-    /**
      * {@inheritdoc}
      */
     protected function initTransaction($table_name, &$id_fields = null, $id_types = null, $require_ids = true)
@@ -910,15 +907,11 @@ class Table extends BaseDbTableResource
         $continue = false,
         $single = false
     ){
-        $ssFilters = ArrayUtils::get($extras, 'ss_filters');
-        $fields = ArrayUtils::get($extras, ApiOptions::FIELDS);
-        $requireMore = ArrayUtils::get($extras, 'require_more');
-        $updates = ArrayUtils::get($extras, 'updates');
-
-        // convert to native format
-        $id = static::idToMongoId($id);
-
-        $fieldArray = ($rollback) ? null : static::buildFieldArray($fields);
+        $ssFilters = array_get($extras, 'ss_filters');
+        $fields = array_get($extras, ApiOptions::FIELDS);
+        $requireMore = array_get($extras, 'require_more');
+        $updates = array_get($extras, 'updates');
+        $options = [];
 
         $out = [];
         switch ($this->getAction()) {
@@ -932,13 +925,17 @@ class Table extends BaseDbTableResource
                     return parent::addToTransaction($parsed, $id);
                 }
 
-                $result = $this->collection->insert($parsed);
-                static::processResult($result);
-
-                $out = static::cleanRecord($parsed, $fields, static::DEFAULT_ID_FIELD);
+                $result = $this->collection->insertOne($parsed, $options);
+                $id = $result->getInsertedId();
+                if ($requireMore) {
+                    $parsed[static::DEFAULT_ID_FIELD] = $id;
+                    $out = static::cleanRecord($parsed, $fields, static::DEFAULT_ID_FIELD);
+                } else {
+                    $out = [static::DEFAULT_ID_FIELD => static::mongoIdToId($id)];
+                }
 
                 if ($rollback) {
-                    $this->addToRollback(static::recordAsId($parsed, static::DEFAULT_ID_FIELD));
+                    $this->addToRollback($id);
                 }
                 break;
 
@@ -955,32 +952,44 @@ class Table extends BaseDbTableResource
 
                 // only update/patch by ids can use batching
                 if (!$continue && !$rollback && !$single && !empty($updates)) {
-                    return parent::addToTransaction(null, $id);
+                    return parent::addToTransaction(null, static::idToMongoId($id));
                 }
 
-                $options = ['new' => !$rollback];
                 if (empty($updates)) {
-                    $out = static::cleanRecord($record, $fields, static::DEFAULT_ID_FIELD);
                     static::removeIds($parsed, static::DEFAULT_ID_FIELD);
                     $updates = $parsed;
-                } else {
-                    $record = $updates;
-                    $record[static::DEFAULT_ID_FIELD] = $id;
-                    $out = static::cleanRecord($record, $fields, static::DEFAULT_ID_FIELD);
                 }
 
-                // simple update overwrite existing record
-                $filter = [static::DEFAULT_ID_FIELD => $id];
+                // simple overwrite existing record
+                $filter = [static::DEFAULT_ID_FIELD => static::idToMongoId($id)];
                 $criteria = $this->buildCriteriaArray($filter, null, $ssFilters);
-                $result = $this->collection->findAndModify($criteria, $updates, $fieldArray, $options);
-                if (empty($result)) {
-                    throw new NotFoundException("Record with id '$id' not found.");
-                }
+                if ($requireMore || $rollback) {
+                    if (!$rollback) {
+                        $options['projection'] = static::buildProjection($fields);
+                        $options['returnDocument'] = FindOneAndReplace::RETURN_DOCUMENT_AFTER;
+                    }
+                    if (null === $result = $this->collection->findOneAndReplace($criteria, $updates, $options)) {
+                        throw new NotFoundException("Record with id '$id' not found.");
+                    }
 
-                if ($rollback) {
-                    $this->addToRollback($result);
+                    if ($rollback) {
+                        $this->addToRollback($result);
+                        // need to retrieve the full record here
+                        if ($requireMore) {
+                            $result = $this->collection->findOne($criteria, $options);
+                            $out = static::cleanRecord($result, $fields, static::DEFAULT_ID_FIELD);
+                        } else {
+                            $out = [static::DEFAULT_ID_FIELD => $id];
+                        }
+                    } else {
+                        $out = static::fromMongoObjects($result);
+                    }
                 } else {
-                    $out = static::fromMongoObjects($result);
+                    $result = $this->collection->replaceOne($criteria, $updates, $options);
+                    if (1 > $result->getMatchedCount()) {
+                        throw new NotFoundException("Record with id '$id' not found.");
+                    }
+                    $out = [static::DEFAULT_ID_FIELD => $id];
                 }
                 break;
 
@@ -998,10 +1007,9 @@ class Table extends BaseDbTableResource
 
                 // only update/patch by ids can use batching
                 if (!$continue && !$rollback && !$single && !empty($updates)) {
-                    return parent::addToTransaction(null, $id);
+                    return parent::addToTransaction(null, static::idToMongoId($id));
                 }
 
-                $options = ['new' => !$rollback];
                 if (empty($updates)) {
                     static::removeIds($parsed, static::DEFAULT_ID_FIELD);
                     $updates = $parsed;
@@ -1010,59 +1018,77 @@ class Table extends BaseDbTableResource
                 $updates = ['$set' => $updates];
 
                 // simple merge with existing record
-                $filter = [static::DEFAULT_ID_FIELD => $id];
+                $filter = [static::DEFAULT_ID_FIELD => static::idToMongoId($id)];
                 $criteria = $this->buildCriteriaArray($filter, null, $ssFilters);
-                $result = $this->collection->findAndModify($criteria, $updates, $fieldArray, $options);
-                if (empty($result)) {
-                    throw new NotFoundException("Record with id '$id' not found.");
-                }
-
-                if ($rollback) {
-                    $this->addToRollback($result);
-
-                    // need to retrieve the full record here
-                    if ($requireMore) {
-                        $result = $this->collection->findOne($criteria, $fieldArray);
-                    } else {
-                        $result = [static::DEFAULT_ID_FIELD => $id];
+                if ($requireMore || $rollback) {
+                    if (!$rollback) {
+                        $options['projection'] = static::buildProjection($fields);
+                        $options['returnDocument'] = FindOneAndUpdate::RETURN_DOCUMENT_AFTER;
                     }
-                }
+                    if (null === $result = $this->collection->findOneAndUpdate($criteria, $updates, $options)) {
+                        throw new NotFoundException("Record with id '$id' not found.");
+                    }
 
-                $out = static::fromMongoObjects($result);
+                    if ($rollback) {
+                        $this->addToRollback($result);
+                        // need to retrieve the full record here
+                        if ($requireMore) {
+                            $result = $this->collection->findOne($criteria, $options);
+                            $out = static::cleanRecord($result, $fields, static::DEFAULT_ID_FIELD);
+                        } else {
+                            $out = [static::DEFAULT_ID_FIELD => $id];
+                        }
+                    } else {
+                        $out = static::fromMongoObjects($result);
+                    }
+                } else {
+                    $result = $this->collection->updateOne($criteria, $updates, $options);
+                    if (1 > $result->getMatchedCount()) {
+                        throw new NotFoundException("Record with id '$id' not found.");
+                    }
+                    $out = [static::DEFAULT_ID_FIELD => $id];
+                }
                 break;
 
             case Verbs::DELETE:
                 if (!$continue && !$rollback && !$single) {
-                    return parent::addToTransaction(null, $id);
+                    return parent::addToTransaction(null, static::idToMongoId($id));
                 }
-
-                $options = ['remove' => true];
 
                 // simple delete existing record
-                $filter = [static::DEFAULT_ID_FIELD => $id];
+                $filter = [static::DEFAULT_ID_FIELD => static::idToMongoId($id)];
                 $criteria = $this->buildCriteriaArray($filter, null, $ssFilters);
-                $result = $this->collection->findAndModify($criteria, null, $fieldArray, $options);
-                if (empty($result)) {
-                    throw new NotFoundException("Record with id '$id' not found.");
-                }
-
-                if ($rollback) {
-                    $this->addToRollback($result);
-                    $out = static::cleanRecord($record, $fields, static::DEFAULT_ID_FIELD);
+                if ($requireMore || $rollback) {
+                    if (!$rollback) {
+                        $options['projection'] = static::buildProjection($fields);
+                    }
+                    if (null === $result = $this->collection->findOneAndDelete($criteria, $options)) {
+                        throw new NotFoundException("Record with id '$id' not found.");
+                    }
+                    if ($rollback) {
+                        $this->addToRollback($result);
+                        $out = static::cleanRecord($result, $fields, static::DEFAULT_ID_FIELD);
+                    } else {
+                        $out = static::fromMongoObjects($result);
+                    }
                 } else {
-                    $out = static::fromMongoObjects($result);
+                    $result = $this->collection->deleteOne($criteria, $options);
+                    if (1 > $result->getDeletedCount()) {
+                        throw new NotFoundException("Record with id '$id' not found.");
+                    }
+                    $out = [static::DEFAULT_ID_FIELD => $id];
                 }
                 break;
 
             case Verbs::GET:
                 if ($continue && !$single) {
-                    return parent::addToTransaction(null, $id);
+                    return parent::addToTransaction(null, static::idToMongoId($id));
                 }
 
-                $filter = [static::DEFAULT_ID_FIELD => $id];
+                $filter = [static::DEFAULT_ID_FIELD => static::idToMongoId($id)];
                 $criteria = $this->buildCriteriaArray($filter, null, $ssFilters);
-                $result = $this->collection->findOne($criteria, $fieldArray);
-                if (empty($result)) {
+                $options['projection'] = static::buildProjection($fields);
+                if (null === $result = $this->collection->findOne($criteria, $options)) {
                     throw new NotFoundException("Record with id '$id' not found.");
                 }
 
@@ -1082,19 +1108,23 @@ class Table extends BaseDbTableResource
             return null;
         }
 
-        $updates = ArrayUtils::get($extras, 'updates');
-        $ssFilters = ArrayUtils::get($extras, 'ss_filters');
-        $fields = ArrayUtils::get($extras, ApiOptions::FIELDS);
-        $requireMore = ArrayUtils::get($extras, 'require_more');
+        $updates = array_get($extras, 'updates');
+        $ssFilters = array_get($extras, 'ss_filters');
+        $fields = array_get($extras, ApiOptions::FIELDS);
+        $requireMore = array_get($extras, 'require_more');
 
         $out = [];
         switch ($this->getAction()) {
             case Verbs::POST:
-                $result = $this->collection->batchInsert($this->batchRecords, ['continueOnError' => false]);
-                static::processResult($result);
-
-                $out = static::cleanRecords($this->batchRecords, $fields, static::DEFAULT_ID_FIELD);
+                $result = $this->collection->insertMany($this->batchRecords, ['ordered' => false]);
+                $this->batchIds = $result->getInsertedIds();
+                if ($requireMore) {
+                    $out = $this->findByIds($this->batchIds, $fields, $ssFilters);
+                } else {
+                    $out = static::idsAsRecords(static::mongoIdsToIds($this->batchIds), static::DEFAULT_ID_FIELD);
+                }
                 break;
+
             case Verbs::PUT:
                 if (empty($updates)) {
                     throw new BadRequestException('Batch operation not supported for update by records.');
@@ -1103,21 +1133,17 @@ class Table extends BaseDbTableResource
                 $filter = [static::DEFAULT_ID_FIELD => ['$in' => $this->batchIds]];
                 $criteria = static::buildCriteriaArray($filter, null, $ssFilters);
 
-                $result = $this->collection->update($criteria, $updates, ['multiple' => true]);
-                $rows = static::processResult($result);
-                if (0 === $rows) {
-                    throw new NotFoundException('No requested records were found to update.');
+                $result = $this->collection->updateMany($criteria, $updates);
+                if (0 === $result->getMatchedCount()) {
+                    throw new NotFoundException('No records were found using the given identifiers.');
                 }
 
-                if (count($this->batchIds) !== $rows) {
-                    throw new BadRequestException('Batch Error: Not all requested records were found to update.');
+                if (count($this->batchIds) !== $result->getMatchedCount()) {
+                    throw new BadRequestException('Batch Error: Not all requested records were deleted.');
                 }
 
                 if ($requireMore) {
-                    $fieldArray = static::buildFieldArray($fields);
-                    /** @var \MongoCursor $result */
-                    $result = $this->collection->find($criteria, $fieldArray);
-                    $out = static::cleanRecords(iterator_to_array($result));
+                    $out = $this->findByIds($this->batchIds, $fields, $ssFilters);
                 } else {
                     $out = static::idsAsRecords(static::mongoIdsToIds($this->batchIds), static::DEFAULT_ID_FIELD);
                 }
@@ -1134,109 +1160,44 @@ class Table extends BaseDbTableResource
                 $filter = [static::DEFAULT_ID_FIELD => ['$in' => $this->batchIds]];
                 $criteria = static::buildCriteriaArray($filter, null, $ssFilters);
 
-                $result = $this->collection->update($criteria, $updates, ['multiple' => true]);
-                $rows = static::processResult($result);
-                if (0 === $rows) {
-                    throw new NotFoundException('No requested records were found to patch.');
+                $result = $this->collection->updateMany($criteria, $updates);
+                if (0 === $result->getMatchedCount()) {
+                    throw new NotFoundException('No records were found using the given identifiers.');
                 }
 
-                if (count($this->batchIds) !== $rows) {
-                    throw new BadRequestException('Batch Error: Not all requested records were found to patch.');
+                if (count($this->batchIds) !== $result->getMatchedCount()) {
+                    throw new BadRequestException('Batch Error: Not all requested records were deleted.');
                 }
 
                 if ($requireMore) {
-                    $fieldArray = static::buildFieldArray($fields);
-                    /** @var \MongoCursor $result */
-                    $result = $this->collection->find($criteria, $fieldArray);
-                    $out = static::cleanRecords(iterator_to_array($result));
+                    $out = $this->findByIds($this->batchIds, $fields, $ssFilters);
                 } else {
                     $out = static::idsAsRecords(static::mongoIdsToIds($this->batchIds), static::DEFAULT_ID_FIELD);
                 }
                 break;
 
             case Verbs::DELETE:
-                $filter = [static::DEFAULT_ID_FIELD => ['$in' => $this->batchIds]];
-                $criteria = static::buildCriteriaArray($filter, null, $ssFilters);
-
                 if ($requireMore) {
-                    $fieldArray = static::buildFieldArray($fields);
-                    $result = $this->collection->find($criteria, $fieldArray);
-                    $result = static::cleanRecords(iterator_to_array($result));
-                    if (empty($result)) {
-                        throw new NotFoundException('No records were found using the given identifiers.');
-                    }
-
-                    if (count($this->batchIds) !== count($result)) {
-                        $errors = [];
-                        foreach ($this->batchIds as $index => $id) {
-                            $found = false;
-                            foreach ($result as $record) {
-                                if ($id == ArrayUtils::get($record, static::DEFAULT_ID_FIELD)) {
-                                    $out[$index] = $record;
-                                    $found = true;
-                                    continue;
-                                }
-                            }
-                            if (!$found) {
-                                $errors[] = $index;
-                                $out[$index] = "Record with identifier '" . print_r($id, true) . "' not found.";
-                            }
-                        }
-                    } else {
-                        $out = $result;
-                    }
+                    $out = $this->findByIds($this->batchIds, $fields, $ssFilters);
                 } else {
                     $out = static::idsAsRecords(static::mongoIdsToIds($this->batchIds), static::DEFAULT_ID_FIELD);
                 }
 
-                $result = $this->collection->remove($criteria);
-                $rows = static::processResult($result);
-                if (0 === $rows) {
+                $filter = [static::DEFAULT_ID_FIELD => ['$in' => $this->batchIds]];
+                $criteria = static::buildCriteriaArray($filter, null, $ssFilters);
+
+                $result = $this->collection->deleteMany($criteria);
+                if (0 === $result->getDeletedCount()) {
                     throw new NotFoundException('No records were found using the given identifiers.');
                 }
 
-                if (count($this->batchIds) !== $rows) {
+                if (count($this->batchIds) !== $result->getDeletedCount()) {
                     throw new BadRequestException('Batch Error: Not all requested records were deleted.');
                 }
                 break;
 
             case Verbs::GET:
-                $filter = [static::DEFAULT_ID_FIELD => ['$in' => $this->batchIds]];
-                $criteria = static::buildCriteriaArray($filter, null, $ssFilters);
-                $fieldArray = static::buildFieldArray($fields);
-
-                $result = $this->collection->find($criteria, $fieldArray);
-                $result = static::cleanRecords(iterator_to_array($result));
-                if (empty($result)) {
-                    throw new NotFoundException('No records were found using the given identifiers.');
-                }
-
-                if (count($this->batchIds) !== count($result)) {
-                    $errors = [];
-                    foreach ($this->batchIds as $index => $id) {
-                        $found = false;
-                        foreach ($result as $record) {
-                            if ($id == ArrayUtils::get($record, static::DEFAULT_ID_FIELD)) {
-                                $out[$index] = $record;
-                                $found = true;
-                                continue;
-                            }
-                        }
-                        if (!$found) {
-                            $errors[] = $index;
-                            $out[$index] = "Record with identifier '" . print_r($id, true) . "' not found.";
-                        }
-                    }
-
-                    if (!empty($errors)) {
-                        $wrapper = ResourcesWrapper::getWrapper();
-                        $context = ['error' => $errors, $wrapper => $out];
-                        throw new NotFoundException('Batch Error: Not all records could be retrieved.', null, null,
-                            $context);
-                    }
-                }
-
-                $out = $result;
+                $out = $this->findByIds($this->batchIds, $fields, $ssFilters);
                 break;
 
             default:
@@ -1259,15 +1220,20 @@ class Table extends BaseDbTableResource
                 case Verbs::POST:
                     // should be ids here from creation
                     $filter = [static::DEFAULT_ID_FIELD => ['$in' => $this->rollbackRecords]];
-                    $this->collection->remove($filter);
+                    $this->collection->deleteMany($filter);
                     break;
 
                 case Verbs::PUT:
                 case Verbs::PATCH:
                 case Verbs::MERGE:
+                    foreach ($this->rollbackRecords as $record) {
+                        $filter = [static::DEFAULT_ID_FIELD => $record[static::DEFAULT_ID_FIELD]];
+                        $this->collection->replaceOne($filter, $record, ['upsert' => true]);
+                    }
+                    break;
                 case Verbs::DELETE:
                     foreach ($this->rollbackRecords as $record) {
-                        $this->collection->save($record);
+                        $this->collection->insertOne($record);
                     }
                     break;
 
@@ -1279,5 +1245,51 @@ class Table extends BaseDbTableResource
         }
 
         return true;
+    }
+
+    protected function findByIds($ids, $fields, $ss_filters = [])
+    {
+        $filter = [static::DEFAULT_ID_FIELD => ['$in' => $ids]];
+        $criteria = static::buildCriteriaArray($filter, null, $ss_filters);
+        $options =
+            [
+                'typeMap'    => ['root' => 'array', 'document' => 'array'],
+                'projection' => static::buildProjection($fields)
+            ];
+
+        $result = $this->collection->find($criteria, $options);
+        if (empty($result)) {
+            throw new NotFoundException('No records were found using the given identifiers.');
+        }
+
+        $result = $result->toArray();
+        $out = static::cleanRecords($result);
+        if (count($this->batchIds) !== count($result)) {
+            $out = [];
+            $errors = [];
+            foreach ($this->batchIds as $index => $id) {
+                $found = false;
+                foreach ($result as $record) {
+                    if ($id == array_get($record, static::DEFAULT_ID_FIELD)) {
+                        $out[$index] = static::cleanRecord($record);
+                        $found = true;
+                        continue;
+                    }
+                }
+                if (!$found) {
+                    $errors[] = $index;
+                    $out[$index] = "Record with identifier '" . print_r($id, true) . "' not found.";
+                }
+            }
+
+            if (!empty($errors)) {
+                $wrapper = ResourcesWrapper::getWrapper();
+                $context = ['error' => $errors, $wrapper => $out];
+                throw new NotFoundException('Batch Error: Not all records could be retrieved.', null, null,
+                    $context);
+            }
+        }
+
+        return $out;
     }
 }
