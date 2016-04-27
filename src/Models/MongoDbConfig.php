@@ -28,7 +28,7 @@ class MongoDbConfig extends BaseServiceConfigModel
 
     public static function validateConfig($config, $create = true)
     {
-        static::checkExtensions(['mongo']);
+        static::checkExtensions(['mongodb']);
 
         if (empty(array_get($config, 'dsn'))) {
             if (empty(array_get($config, 'options.db'))) {
