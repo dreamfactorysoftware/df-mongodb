@@ -6,7 +6,7 @@ use DreamFactory\Core\Components\RequireExtensions;
 use DreamFactory\Core\Contracts\CacheInterface;
 use DreamFactory\Core\Contracts\DbExtrasInterface;
 use DreamFactory\Core\Contracts\SchemaInterface;
-use DreamFactory\Core\Database\TableSchema;
+use DreamFactory\Core\Database\Schema\TableSchema;
 use DreamFactory\Core\Exceptions\InternalServerErrorException;
 use DreamFactory\Core\MongoDb\Resources\Schema;
 use DreamFactory\Core\MongoDb\Resources\Table;
