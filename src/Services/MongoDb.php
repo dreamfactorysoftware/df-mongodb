@@ -82,48 +82,6 @@ class MongoDb extends BaseNoSqlDbService implements CacheInterface, DbExtrasInte
     //	Methods
     //*************************************************************************
 
-    public static function adaptConfig(array &$config)
-    {
-        $dsn = isset($config['dsn']) ? $config['dsn'] : null;
-        if (!empty($dsn)) {
-            // default PDO DSN pieces
-            $dsn = str_replace(' ', '', $dsn);
-            if (!isset($config['port']) && (false !== ($pos = strpos($dsn, 'port=')))) {
-                $temp = substr($dsn, $pos + 5);
-                $config['port'] = (false !== $pos = strpos($temp, ';')) ? substr($temp, 0, $pos) : $temp;
-            }
-            if (!isset($config['host']) && (false !== ($pos = strpos($dsn, 'host=')))) {
-                $temp = substr($dsn, $pos + 5);
-                $host = (false !== $pos = stripos($temp, ';')) ? substr($temp, 0, $pos) : $temp;
-                if (!isset($config['port']) && (false !== ($pos = stripos($host, ':')))) {
-                    $temp = substr($host, $pos + 1);
-                    $host = substr($host, 0, $pos);
-                    $config['port'] = (false !== $pos = stripos($temp, ';')) ? substr($temp, 0, $pos) : $temp;
-                }
-                $config['host'] = $host;
-            }
-            if (!isset($config['database']) && (false !== ($pos = strpos($dsn, 'dbname=')))) {
-                $temp = substr($dsn, $pos + 7);
-                $config['database'] = (false !== $pos = strpos($temp, ';')) ? substr($temp, 0, $pos) : $temp;
-            }
-        }
-
-        // must be there
-        if (!array_key_exists('database', $config)) {
-            $config['database'] = null;
-        }
-
-        // must be there
-        if (!array_key_exists('prefix', $config)) {
-            $config['prefix'] = null;
-        }
-
-        // laravel database config requires options to be [], not null
-        if (array_key_exists('options', $config) && is_null($config['options'])) {
-            $config['options'] = [];
-        }
-    }
-
     /**
      * Create a new MongoDbSvc
      *
@@ -143,44 +101,37 @@ class MongoDb extends BaseNoSqlDbService implements CacheInterface, DbExtrasInte
         $config['driver'] = 'mongodb';
         $dsn = strval(array_get($config, 'dsn'));
         if (!empty($dsn)) {
+            // add prefix if not there
             if (0 != substr_compare($dsn, static::DSN_PREFIX, 0, static::DSN_PREFIX_LENGTH, true)) {
                 $dsn = static::DSN_PREFIX . $dsn;
+                $config['dsn'] = $dsn;
             }
+        } else {
+            $dsn = 'mongodb://localhost:27017';
+            $config['dsn'] = $dsn;
         }
 
+        // laravel database config requires options to be [], not null
         $options = array_get($config, 'options', []);
         if (empty($options)) {
-            $options = [];
+            $config['options'] = [];
         }
-        $user = array_get($config, 'username');
-        $password = array_get($config, 'password');
-
-        // support old configuration options of user, pwd, and db in credentials directly
-        if (!isset($options['username']) && isset($user)) {
-            $options['username'] = $user;
-        }
-        if (!isset($options['password']) && isset($password)) {
-            $options['password'] = $password;
-        }
-        if (!isset($options['db']) && (!empty($db = array_get($config, 'db')))) {
-            $options['db'] = $db;
-        }
-
-        if (!isset($db) && empty($db = array_get($options, 'db'))) {
+        if ((!empty($db = array_get($config, 'options.db')))) {
+            $config['database'] = $db;
+        } elseif ((!empty($db = array_get($config, 'options.database')))) {
+            $config['database'] = $db;
+        } else {
             //  Attempt to find db in connection string
             $db = strstr(substr($dsn, static::DSN_PREFIX_LENGTH), '/');
             if (false !== $pos = strpos($db, '?')) {
                 $db = substr($db, 0, $pos);
             }
             $db = trim($db, '/');
+            $config['database'] = $db;
         }
 
         if (empty($db)) {
             throw new InternalServerErrorException("No MongoDb database selected in configuration.");
-        }
-
-        if (!isset($config['database'])) {
-            $config['database'] = $db;
         }
 
         $driverOptions = array_get($config, 'driver_options');
@@ -189,8 +140,6 @@ class MongoDb extends BaseNoSqlDbService implements CacheInterface, DbExtrasInte
             //  Automatically creates a stream from context
             $driverOptions['context'] = stream_context_create($context);
         }
-
-        static::adaptConfig($config);
 
         // add config to global for reuse, todo check existence and update?
         config(['database.connections.service.' . $this->name => $config]);
@@ -209,6 +158,9 @@ class MongoDb extends BaseNoSqlDbService implements CacheInterface, DbExtrasInte
     public function __destruct()
     {
         try {
+            /** @type DatabaseManager $db */
+            $db = app('db');
+            $db->disconnect('service.' . $this->name);
             $this->dbConn = null;
         } catch (\Exception $ex) {
             error_log("Failed to disconnect from database.\n{$ex->getMessage()}");
