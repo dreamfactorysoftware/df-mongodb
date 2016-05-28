@@ -1,7 +1,7 @@
 <?php
 namespace DreamFactory\Core\MongoDb\Resources;
 
-use DreamFactory\Core\Database\ColumnSchema;
+use DreamFactory\Core\Database\Schema\ColumnSchema;
 use DreamFactory\Core\Exceptions\BadRequestException;
 use DreamFactory\Core\Exceptions\InternalServerErrorException;
 use DreamFactory\Core\Exceptions\NotFoundException;
