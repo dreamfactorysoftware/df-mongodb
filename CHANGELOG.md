@@ -9,6 +9,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+## [0.3.0] - 2016-05-27
+### Changed
+- Moved seeding functionality to service provider to adhere to df-core changes.
+
 ## [0.2.3] - 2016-04-27
 ### Changed
 - Removed requirement for old mongo driver (mongo.so)
@@ -44,7 +48,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## 0.1.0 - 2015-10-24
 First official release working with the new [df-core](https://github.com/dreamfactorysoftware/df-core) library.
 
-[Unreleased]: https://github.com/dreamfactorysoftware/df-mongodb/compare/0.2.2...HEAD
+[Unreleased]: https://github.com/dreamfactorysoftware/df-mongodb/compare/0.3.0...HEAD
+[0.3.0]: https://github.com/dreamfactorysoftware/df-mongodb/compare/0.2.2...0.3.0
 [0.2.2]: https://github.com/dreamfactorysoftware/df-mongodb/compare/0.2.1...0.2.2
 [0.2.1]: https://github.com/dreamfactorysoftware/df-mongodb/compare/0.2.0...0.2.1
 [0.2.0]: https://github.com/dreamfactorysoftware/df-mongodb/compare/0.1.1...0.2.0
