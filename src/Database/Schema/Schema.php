@@ -3,6 +3,7 @@ namespace DreamFactory\Core\MongoDb\Database\Schema;
 
 use DreamFactory\Core\Database\Schema\ColumnSchema;
 use DreamFactory\Core\Database\Schema\TableSchema;
+use DreamFactory\Core\Enums\DbSimpleTypes;
 use Jenssegers\Mongodb\Connection;
 use MongoDB\Model\CollectionInfo;
 
@@ -195,7 +196,7 @@ class Schema extends \DreamFactory\Core\Database\Schema\Schema
     {
         $result = 0;
         $tableInfo = $this->getTable($table);
-        if (($columnInfo = $tableInfo->getColumn($column)) && (ColumnSchema::TYPE_VIRTUAL !== $columnInfo->type)) {
+        if (($columnInfo = $tableInfo->getColumn($column)) && (DbSimpleTypes::TYPE_VIRTUAL !== $columnInfo->type)) {
         }
         $this->removeSchemaExtrasForFields($table, $column);
 
@@ -287,7 +288,7 @@ class Schema extends \DreamFactory\Core\Database\Schema\Schema
     public function parseValueForSet($value, $field_info)
     {
         switch ($field_info->type) {
-            case ColumnSchema::TYPE_BOOLEAN:
+            case DbSimpleTypes::TYPE_BOOLEAN:
                 $value = (filter_var($value, FILTER_VALIDATE_BOOLEAN) ? 1 : 0);
                 break;
         }
