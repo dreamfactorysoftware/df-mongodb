@@ -2,7 +2,6 @@
 namespace DreamFactory\Core\SqlDb\Components;
 
 use DreamFactory\Core\Utility\ResourcesWrapper;
-use DreamFactory\Library\Utility\ArrayUtils;
 
 trait TableDescriber
 {

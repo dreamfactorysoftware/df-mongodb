@@ -10,7 +10,7 @@ use DreamFactory\Core\Exceptions\InternalServerErrorException;
 use DreamFactory\Core\Exceptions\NotFoundException;
 use DreamFactory\Core\Exceptions\RestException;
 use DreamFactory\Core\MongoDb\Services\MongoDb;
-use DreamFactory\Core\Resources\BaseDbTableResource;
+use DreamFactory\Core\Resources\BaseNoSqlDbTableResource;
 use DreamFactory\Core\Utility\ResourcesWrapper;
 use DreamFactory\Core\Utility\Session;
 use DreamFactory\Library\Utility\Enums\Verbs;
@@ -24,7 +24,7 @@ use MongoDB\Model\BSONDocument;
 use MongoDB\Operation\FindOneAndReplace;
 use MongoDB\Operation\FindOneAndUpdate;
 
-class Table extends BaseDbTableResource
+class Table extends BaseNoSqlDbTableResource
 {
     //*************************************************************************
     //	Constants
