@@ -6,6 +6,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 
 ### Changed
+- DF-741 Make fields optional for MongoDb services.
 
 ### Fixed
 
