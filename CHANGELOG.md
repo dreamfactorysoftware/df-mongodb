@@ -9,13 +9,20 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+## [0.4.0] - 2016-08-21
+### Changed
+- General cleanup from declaration changes in df-core for service doc and providers
+
+### Fixed
+- DF-741 Make 'fields' optional for creating table
+
 ## [0.3.1] - 2016-07-08
 ### Changed
-- General cleanup from declaration changes in df-core.
+- General cleanup from declaration changes in df-core
 
 ## [0.3.0] - 2016-05-27
 ### Changed
-- Moved seeding functionality to service provider to adhere to df-core changes.
+- Moved seeding functionality to service provider to adhere to df-core changes
 
 ## [0.2.3] - 2016-04-27
 ### Changed
@@ -26,7 +33,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - Schema changes to support virtual relationships to SQL DB services
 
 ### Changed
-- Switched to use jensseger connection classes.
+- Switched to use jensseger connection classes
 - Rework schema to be like SQL DB connections
 
 ### Fixed
@@ -52,7 +59,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## 0.1.0 - 2015-10-24
 First official release working with the new [df-core](https://github.com/dreamfactorysoftware/df-core) library.
 
-[Unreleased]: https://github.com/dreamfactorysoftware/df-mongodb/compare/0.3.1...HEAD
+[Unreleased]: https://github.com/dreamfactorysoftware/df-mongodb/compare/0.4.0...HEAD
+[0.4.0]: https://github.com/dreamfactorysoftware/df-mongodb/compare/0.3.1...0.4.0
 [0.3.1]: https://github.com/dreamfactorysoftware/df-mongodb/compare/0.3.0...0.3.1
 [0.3.0]: https://github.com/dreamfactorysoftware/df-mongodb/compare/0.2.2...0.3.0
 [0.2.2]: https://github.com/dreamfactorysoftware/df-mongodb/compare/0.2.1...0.2.2

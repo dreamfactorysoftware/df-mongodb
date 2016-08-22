@@ -95,24 +95,21 @@ class Schema extends \DreamFactory\Core\Database\Schema\Schema
 
     public function createTable($table, $schema, $options = null)
     {
-        if (empty($schema['field'])) {
-            throw new \Exception("No valid fields exist in the received table schema.");
-        }
-
-        $results = $this->buildTableFields($table, $schema['field']);
-        if (empty($results['columns'])) {
-            throw new \Exception("No valid fields exist in the received table schema.");
-        }
-
-        $cols = [];
-        foreach ($results['columns'] as $name => $type) {
-            if (is_string($name)) {
-                $cols[] = "\t" . $this->quoteColumnName($name) . ' ' . $this->getColumnType($type);
-            } else {
-                $cols[] = "\t" . $type;
+        $results = [];
+        if (!empty($schema['field'])) {
+            $results = $this->buildTableFields($table, $schema['field']);
+            if (!empty($results['columns'])) {
+                $cols = [];
+                foreach ($results['columns'] as $name => $type) {
+                    if (is_string($name)) {
+                        $cols[] = "\t" . $this->quoteColumnName($name) . ' ' . $this->getColumnType($type);
+                    } else {
+                        $cols[] = "\t" . $type;
+                    }
+                }
             }
         }
-
+        
         if (!is_array($options)){
             $options = [];
         }
