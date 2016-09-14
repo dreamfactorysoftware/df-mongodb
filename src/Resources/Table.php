@@ -17,8 +17,9 @@ use DreamFactory\Library\Utility\Enums\Verbs;
 use DreamFactory\Library\Utility\Scalar;
 use MongoDB\BSON\Binary;
 use MongoDB\BSON\ObjectID;
+use MongoDB\BSON\Regex;
 use MongoDB\BSON\Timestamp;
-use MongoDB\BSON\UTCDatetime;
+use MongoDB\BSON\UTCDateTime;
 use MongoDB\Collection;
 use MongoDB\Model\BSONDocument;
 use MongoDB\Operation\FindOneAndReplace;
@@ -459,33 +460,28 @@ class Table extends BaseNoSqlDbTableResource
 
                         return [$field => $value];
                     } elseif (DbComparisonOperators::LIKE === $sqlOp) {
-//			WHERE name LIKE "%Joe%"	(array("name" => new MongoRegex("/Joe/")));
-//			WHERE name LIKE "Joe%"	(array("name" => new MongoRegex("/^Joe/")));
-//			WHERE name LIKE "%Joe"	(array("name" => new MongoRegex("/Joe$/")));
+//			WHERE name LIKE "%Joe%"	(array("name" => new Regex("/Joe/")));
+//			WHERE name LIKE "Joe%"	(array("name" => new Regex("/^Joe/")));
+//			WHERE name LIKE "%Joe"	(array("name" => new Regex("/Joe$/")));
                         if ('%' == $value[strlen($value) - 1]) {
                             if ('%' == $value[0]) {
-                                $value = '/' . trim($value, '%') . '/ ';
+                                $value = trim($value, '%');
                             } else {
-                                $value = '/^' . rtrim($value, '%') . '/ ';
+                                $value = '^' . rtrim($value, '%');
                             }
                         } else {
                             if ('%' == $value[0]) {
-                                $value = '/' . trim($value, '%') . '$/ ';
-                            } else {
-                                $value = '/' . $value . '/ ';
+                                $value = trim($value, '%') . '$';
                             }
                         }
 
-                        return [$field => new \MongoRegex($value)];
+                        return [$field => new Regex($value, '')];
                     } elseif (DbComparisonOperators::CONTAINS === $sqlOp) {
-//			WHERE name LIKE "%Joe%"	(array("name" => new MongoRegex("/Joe/")));
-                        return [$field => new \MongoRegex('/' . $value . '/ ')];
+                        return [$field => new Regex($value, '')];
                     } elseif (DbComparisonOperators::STARTS_WITH === $sqlOp) {
-//			WHERE name LIKE "Joe%"	(array("name" => new MongoRegex("/^Joe/")));
-                        return [$field => new \MongoRegex('/^' . $value . '/ ')];
+                        return [$field => new Regex('^' . $value, '')];
                     } elseif (DbComparisonOperators::ENDS_WITH === $sqlOp) {
-//			WHERE name LIKE "%Joe"	(array("name" => new MongoRegex("/Joe$/")));
-                        return [$field => new \MongoRegex('/' . $value . '$/ ')];
+                        return [$field => new Regex($value . '$', '')];
                     }
                 }
 
@@ -715,7 +711,7 @@ class Table extends BaseNoSqlDbTableResource
                         $data = (string)$data;
                     } elseif ($data instanceof Timestamp) {
                         $data = (string)$data;
-                    } elseif ($data instanceof UTCDatetime) {
+                    } elseif ($data instanceof UTCDateTime) {
                         $data = $data->toDateTime();
                         $data = ['$date' => $data];
                     } elseif ($data instanceof Binary) {

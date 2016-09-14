@@ -4,11 +4,12 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Added
-- Extend provisioning to include host, port, etc. to simplify and update configuration to latest models.
+- DF-826 Extend provisioning to include host, port, etc. to simplify and update configuration to latest models.
 
 ### Changed
 
 ### Fixed
+- DF-834 Utilize the BSON Regex instead of the old MongoRegex to fix 'like' syntax.
 
 ## [0.4.0] - 2016-08-21
 ### Changed
