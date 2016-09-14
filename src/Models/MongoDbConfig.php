@@ -3,8 +3,7 @@ namespace DreamFactory\Core\MongoDb\Models;
 
 use DreamFactory\Core\Components\RequireExtensions;
 use DreamFactory\Core\Exceptions\BadRequestException;
-use DreamFactory\Core\Models\BaseServiceConfigModel;
-use DreamFactory\Core\Models\ServiceCacheConfig;
+use DreamFactory\Core\Models\CacheableServiceConfig;
 use DreamFactory\Core\MongoDb\Services\MongoDb;
 
 /**
@@ -12,46 +11,55 @@ use DreamFactory\Core\MongoDb\Services\MongoDb;
  *
  * @property integer $service_id
  * @property string  $dsn
+ * @property string  $host
+ * @property integer $port
+ * @property string  $database
+ * @property string  $username
+ * @property string  $password
  * @property array   $options
  * @property array   $driver_options
  *
  * @method static MongoDbConfig whereServiceId($value)
  */
-class MongoDbConfig extends BaseServiceConfigModel
+class MongoDbConfig extends CacheableServiceConfig
 {
     use RequireExtensions;
 
     protected $table = 'mongodb_config';
 
-    protected $fillable = ['service_id', 'dsn', 'options', 'driver_options'];
+    protected $fillable = [
+        'service_id',
+        'dsn',
+        'host',
+        'port',
+        'database',
+        'username',
+        'password',
+        'options',
+        'driver_options'
+    ];
 
     protected $casts = [
         'service_id'     => 'integer',
+        'port'           => 'integer',
         'options'        => 'array',
         'driver_options' => 'array'
     ];
-    
+
+    protected $encrypted = ['username', 'password'];
+
+    protected $protected = ['password'];
+
     /**
-     * @param int $id
-     *
-     * @return array
+     * {@inheritdoc}
      */
-    public static function getConfig($id)
-    {
-        $config = parent::getConfig($id);
-
-        $cacheConfig = ServiceCacheConfig::whereServiceId($id)->first();
-        $config['cache_enabled'] = (empty($cacheConfig)) ? false : $cacheConfig->getAttribute('cache_enabled');
-        $config['cache_ttl'] = (empty($cacheConfig)) ? 0 : $cacheConfig->getAttribute('cache_ttl');
-
-        return $config;
-    }
-
     public static function validateConfig($config, $create = true)
     {
         static::checkExtensions(['mongodb']);
 
-        if (empty(array_get($config, 'options.db')) && empty(array_get($config, 'options.database'))) {
+        if (empty(array_get($config, 'database')) && empty(array_get($config, 'options.db')) &&
+            empty(array_get($config, 'options.database'))
+        ) {
             //  Attempt to find db in connection string
             $dsn = strval(array_get($config, 'dsn'));
             $db = strstr(substr($dsn, MongoDb::DSN_PREFIX_LENGTH), '/');
@@ -60,7 +68,7 @@ class MongoDbConfig extends BaseServiceConfigModel
             }
             $db = trim($db, '/');
             if (empty($db)) {
-                throw new BadRequestException("Database name must be included in the dsn or provided as an 'option' attribute.");
+                throw new BadRequestException("Database name must be provided or included in the dsn or as an 'option' attribute.");
             }
         }
 
@@ -71,39 +79,40 @@ class MongoDbConfig extends BaseServiceConfigModel
     /**
      * {@inheritdoc}
      */
-    public static function setConfig($id, $config)
-    {
-        $cache = [];
-        if (isset($config['cache_enabled'])) {
-            $cache['cache_enabled'] = $config['cache_enabled'];
-            unset($config['cache_enabled']);
-        }
-        if (isset($config['cache_ttl'])) {
-            $cache['cache_ttl'] = $config['cache_ttl'];
-            unset($config['cache_ttl']);
-        }
-        if (!empty($cache)) {
-            ServiceCacheConfig::setConfig($id, $cache);
-        }
-
-        parent::setConfig($id, $config);
-    }
-
-    /**
-     * @param array $schema
-     */
     protected static function prepareConfigSchemaField(array &$schema)
     {
         parent::prepareConfigSchemaField($schema);
 
         switch ($schema['name']) {
+            case 'host':
+                $schema['label'] = 'Host';
+                $schema['description'] = 'The name of the database host, i.e. localhost, 192.168.1.1, etc.';
+                break;
+            case 'port':
+                $schema['label'] = 'Port Number';
+                $schema['description'] = 'The number of the database host port, i.e. 27017';
+                break;
+            case 'database':
+                $schema['label'] = 'Database';
+                $schema['description'] =
+                    'The name of the database to connect to on the given server. This can be a lookup key.';
+                break;
+            case 'username':
+                $schema['label'] = 'Username';
+                $schema['description'] = 'The name of the database user. This can be a lookup key.';
+                break;
+            case 'password':
+                $schema['label'] = 'Password';
+                $schema['type'] = 'password';
+                $schema['description'] = 'The password for the database user. This can be a lookup key.';
+                break;
             case 'dsn':
                 $schema['label'] = 'Connection String';
-                $schema['default'] = 'mongodb://[username:password@]host1[:port1][,host2[:port2:],...][/database][?options]';
                 $schema['description'] =
-                    'The connection string for the service, i.e. mongodb://[username:password@]host1[:port1][,host2[:port2:],...][/database][?options]. ' .
-                    ' The username, password, and database values can be added in the connection string or in the options below.' .
-                    ' For further information, see https://docs.mongodb.com/manual/reference/connection-string/#connection-string-options.';
+                    'Overrides all other settings except options. The connection string for the service, '.
+                    'i.e. mongodb://[username:password@]host1[:port1][,host2[:port2:],...][/database][?options]. ' .
+                    'The username, password, and database values can be added in the connection string or in the options below. ' .
+                    'For further information, see https://docs.mongodb.com/manual/reference/connection-string/#connection-string-options.';
                 break;
             case 'options':
                 $schema['type'] = 'object';

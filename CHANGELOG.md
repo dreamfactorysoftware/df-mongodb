@@ -4,6 +4,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Added
+- Extend provisioning to include host, port, etc. to simplify and update configuration to latest models.
 
 ### Changed
 
