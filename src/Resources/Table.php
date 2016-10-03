@@ -17,8 +17,9 @@ use DreamFactory\Library\Utility\Enums\Verbs;
 use DreamFactory\Library\Utility\Scalar;
 use MongoDB\BSON\Binary;
 use MongoDB\BSON\ObjectID;
+use MongoDB\BSON\Regex;
 use MongoDB\BSON\Timestamp;
-use MongoDB\BSON\UTCDatetime;
+use MongoDB\BSON\UTCDateTime;
 use MongoDB\Collection;
 use MongoDB\Model\BSONDocument;
 use MongoDB\Operation\FindOneAndReplace;
@@ -51,6 +52,11 @@ class Table extends BaseNoSqlDbTableResource
     //*************************************************************************
     //	Methods
     //*************************************************************************
+
+    protected function getOptionalParameters()
+    {
+        return array_merge(parent::getOptionalParameters(), []);
+    }
 
     /**
      * @return null|MongoDb
@@ -213,10 +219,17 @@ class Table extends BaseNoSqlDbTableResource
         $limit = intval(array_get($extras, ApiOptions::LIMIT, 0));
         $offset = intval(array_get($extras, ApiOptions::OFFSET, 0));
         $sort = static::buildSortArray(array_get($extras, ApiOptions::ORDER));
-        $addCount = Scalar::boolval(array_get($extras, ApiOptions::INCLUDE_COUNT, false));
+        $countOnly = Scalar::boolval(array_get($extras, ApiOptions::COUNT_ONLY));
+        $includeCount = Scalar::boolval(array_get($extras, ApiOptions::INCLUDE_COUNT, false));
+        $maxAllowed = static::getMaxRecordsReturnedLimit();
+        $needLimit = false;
+        if (($limit < 1) || ($limit > $maxAllowed)) {
+            // impose a limit to protect server
+            $limit = $maxAllowed;
+            $needLimit = true;
+        }
 
         try {
-            $maxAllowed = static::getMaxRecordsReturnedLimit();
             $options = [];
             if ($offset) {
                 $options['skip'] = $offset;
@@ -224,25 +237,36 @@ class Table extends BaseNoSqlDbTableResource
             if ($sort) {
                 $options['sort'] = $sort;
             }
-            if (($limit < 1) || ($limit > $maxAllowed)) {
-                $limit = $maxAllowed;
-            }
             $options['limit'] = $limit;
+
             $options['projection'] = static::buildProjection($fields);
             $options['typeMap'] = ['root' => 'array', 'document' => 'array'];
 
-            $count = $coll->count($criteria);
+            // count total records
+            $count = ($countOnly || $includeCount || $needLimit) ? $coll->count($criteria) : 0;
+
+            if ($countOnly) {
+                return $count;
+            }
+
             $result = $coll->find($criteria, $options);
-            $out = static::cleanRecords($result->toArray());
-            $needMore = (($count - $offset) > $limit);
-            if ($addCount || $needMore) {
-                $out['meta']['count'] = $count;
-                if ($needMore) {
-                    $out['meta']['next'] = $offset + $limit;
+            $data = static::cleanRecords($result->toArray());
+
+            $meta = [];
+            if ($includeCount || $needLimit) {
+                if ($includeCount || $count > $maxAllowed) {
+                    $meta['count'] = $count;
+                }
+                if (($count - $offset) > $limit) {
+                    $meta['next'] = $offset + $limit;
                 }
             }
 
-            return $out;
+            if (!empty($meta)) {
+                $data['meta'] = $meta;
+            }
+
+            return $data;
         } catch (\Exception $ex) {
             throw new InternalServerErrorException("Failed to filter records from '$table'.\n{$ex->getMessage()}");
         }
@@ -459,33 +483,28 @@ class Table extends BaseNoSqlDbTableResource
 
                         return [$field => $value];
                     } elseif (DbComparisonOperators::LIKE === $sqlOp) {
-//			WHERE name LIKE "%Joe%"	(array("name" => new MongoRegex("/Joe/")));
-//			WHERE name LIKE "Joe%"	(array("name" => new MongoRegex("/^Joe/")));
-//			WHERE name LIKE "%Joe"	(array("name" => new MongoRegex("/Joe$/")));
+//			WHERE name LIKE "%Joe%"	(array("name" => new Regex("/Joe/")));
+//			WHERE name LIKE "Joe%"	(array("name" => new Regex("/^Joe/")));
+//			WHERE name LIKE "%Joe"	(array("name" => new Regex("/Joe$/")));
                         if ('%' == $value[strlen($value) - 1]) {
                             if ('%' == $value[0]) {
-                                $value = '/' . trim($value, '%') . '/ ';
+                                $value = trim($value, '%');
                             } else {
-                                $value = '/^' . rtrim($value, '%') . '/ ';
+                                $value = '^' . rtrim($value, '%');
                             }
                         } else {
                             if ('%' == $value[0]) {
-                                $value = '/' . trim($value, '%') . '$/ ';
-                            } else {
-                                $value = '/' . $value . '/ ';
+                                $value = trim($value, '%') . '$';
                             }
                         }
 
-                        return [$field => new \MongoRegex($value)];
+                        return [$field => new Regex($value, '')];
                     } elseif (DbComparisonOperators::CONTAINS === $sqlOp) {
-//			WHERE name LIKE "%Joe%"	(array("name" => new MongoRegex("/Joe/")));
-                        return [$field => new \MongoRegex('/' . $value . '/ ')];
+                        return [$field => new Regex($value, '')];
                     } elseif (DbComparisonOperators::STARTS_WITH === $sqlOp) {
-//			WHERE name LIKE "Joe%"	(array("name" => new MongoRegex("/^Joe/")));
-                        return [$field => new \MongoRegex('/^' . $value . '/ ')];
+                        return [$field => new Regex('^' . $value, '')];
                     } elseif (DbComparisonOperators::ENDS_WITH === $sqlOp) {
-//			WHERE name LIKE "%Joe"	(array("name" => new MongoRegex("/Joe$/")));
-                        return [$field => new \MongoRegex('/' . $value . '$/ ')];
+                        return [$field => new Regex($value . '$', '')];
                     }
                 }
 
@@ -715,7 +734,7 @@ class Table extends BaseNoSqlDbTableResource
                         $data = (string)$data;
                     } elseif ($data instanceof Timestamp) {
                         $data = (string)$data;
-                    } elseif ($data instanceof UTCDatetime) {
+                    } elseif ($data instanceof UTCDateTime) {
                         $data = $data->toDateTime();
                         $data = ['$date' => $data];
                     } elseif ($data instanceof Binary) {

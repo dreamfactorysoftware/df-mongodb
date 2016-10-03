@@ -1,5 +1,5 @@
 <?php
-namespace DreamFactory\Core\SqlDb\Components;
+namespace DreamFactory\Core\MongoDb\Components;
 
 use DreamFactory\Core\Utility\ResourcesWrapper;
 

@@ -94,21 +94,16 @@ class MongoDb extends BaseNoSqlDbService implements CacheInterface, DbExtrasInte
     {
         parent::__construct($settings);
 
-        $config = array_get($settings, 'config');
-        $config = (empty($config) ? [] : (!is_array($config) ? [$config] : $config));
+        $config = (array)array_get($settings, 'config');
         Session::replaceLookups($config, true);
 
         $config['driver'] = 'mongodb';
-        $dsn = strval(array_get($config, 'dsn'));
-        if (!empty($dsn)) {
+        if (!empty($dsn = strval(array_get($config, 'dsn')))) {
             // add prefix if not there
             if (0 != substr_compare($dsn, static::DSN_PREFIX, 0, static::DSN_PREFIX_LENGTH, true)) {
                 $dsn = static::DSN_PREFIX . $dsn;
                 $config['dsn'] = $dsn;
             }
-        } else {
-            $dsn = 'mongodb://localhost:27017';
-            $config['dsn'] = $dsn;
         }
 
         // laravel database config requires options to be [], not null
@@ -116,26 +111,27 @@ class MongoDb extends BaseNoSqlDbService implements CacheInterface, DbExtrasInte
         if (empty($options)) {
             $config['options'] = [];
         }
-        if ((!empty($db = array_get($config, 'options.db')))) {
-            $config['database'] = $db;
-        } elseif ((!empty($db = array_get($config, 'options.database')))) {
-            $config['database'] = $db;
-        } else {
-            //  Attempt to find db in connection string
-            $db = strstr(substr($dsn, static::DSN_PREFIX_LENGTH), '/');
-            if (false !== $pos = strpos($db, '?')) {
-                $db = substr($db, 0, $pos);
+        if (empty($db = array_get($config, 'database'))) {
+            if (!empty($db = array_get($config, 'options.db'))) {
+                $config['database'] = $db;
+            } elseif (!empty($db = array_get($config, 'options.database'))) {
+                $config['database'] = $db;
+            } else {
+                //  Attempt to find db in connection string
+                $db = strstr(substr($dsn, static::DSN_PREFIX_LENGTH), '/');
+                if (false !== $pos = strpos($db, '?')) {
+                    $db = substr($db, 0, $pos);
+                }
+                $db = trim($db, '/');
+                $config['database'] = $db;
             }
-            $db = trim($db, '/');
-            $config['database'] = $db;
         }
 
         if (empty($db)) {
             throw new InternalServerErrorException("No MongoDb database selected in configuration.");
         }
 
-        $driverOptions = array_get($config, 'driver_options');
-        $driverOptions = (empty($driverOptions) ? [] : (!is_array($driverOptions) ? [$driverOptions] : $driverOptions));
+        $driverOptions = (array)array_get($config, 'driver_options');
         if (null !== $context = array_get($driverOptions, 'context')) {
             //  Automatically creates a stream from context
             $driverOptions['context'] = stream_context_create($context);
