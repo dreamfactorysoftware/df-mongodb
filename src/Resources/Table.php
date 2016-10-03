@@ -53,6 +53,11 @@ class Table extends BaseNoSqlDbTableResource
     //	Methods
     //*************************************************************************
 
+    protected function getOptionalParameters()
+    {
+        return array_merge(parent::getOptionalParameters(), []);
+    }
+
     /**
      * @return null|MongoDb
      */
@@ -214,10 +219,17 @@ class Table extends BaseNoSqlDbTableResource
         $limit = intval(array_get($extras, ApiOptions::LIMIT, 0));
         $offset = intval(array_get($extras, ApiOptions::OFFSET, 0));
         $sort = static::buildSortArray(array_get($extras, ApiOptions::ORDER));
-        $addCount = Scalar::boolval(array_get($extras, ApiOptions::INCLUDE_COUNT, false));
+        $countOnly = Scalar::boolval(array_get($extras, ApiOptions::COUNT_ONLY));
+        $includeCount = Scalar::boolval(array_get($extras, ApiOptions::INCLUDE_COUNT, false));
+        $maxAllowed = static::getMaxRecordsReturnedLimit();
+        $needLimit = false;
+        if (($limit < 1) || ($limit > $maxAllowed)) {
+            // impose a limit to protect server
+            $limit = $maxAllowed;
+            $needLimit = true;
+        }
 
         try {
-            $maxAllowed = static::getMaxRecordsReturnedLimit();
             $options = [];
             if ($offset) {
                 $options['skip'] = $offset;
@@ -225,25 +237,36 @@ class Table extends BaseNoSqlDbTableResource
             if ($sort) {
                 $options['sort'] = $sort;
             }
-            if (($limit < 1) || ($limit > $maxAllowed)) {
-                $limit = $maxAllowed;
-            }
             $options['limit'] = $limit;
+
             $options['projection'] = static::buildProjection($fields);
             $options['typeMap'] = ['root' => 'array', 'document' => 'array'];
 
-            $count = $coll->count($criteria);
+            // count total records
+            $count = ($countOnly || $includeCount || $needLimit) ? $coll->count($criteria) : 0;
+
+            if ($countOnly) {
+                return $count;
+            }
+
             $result = $coll->find($criteria, $options);
-            $out = static::cleanRecords($result->toArray());
-            $needMore = (($count - $offset) > $limit);
-            if ($addCount || $needMore) {
-                $out['meta']['count'] = $count;
-                if ($needMore) {
-                    $out['meta']['next'] = $offset + $limit;
+            $data = static::cleanRecords($result->toArray());
+
+            $meta = [];
+            if ($includeCount || $needLimit) {
+                if ($includeCount || $count > $maxAllowed) {
+                    $meta['count'] = $count;
+                }
+                if (($count - $offset) > $limit) {
+                    $meta['next'] = $offset + $limit;
                 }
             }
 
-            return $out;
+            if (!empty($meta)) {
+                $data['meta'] = $meta;
+            }
+
+            return $data;
         } catch (\Exception $ex) {
             throw new InternalServerErrorException("Failed to filter records from '$table'.\n{$ex->getMessage()}");
         }
