@@ -16,8 +16,8 @@ class MongodbDsnBreakout extends Migration
             $table->string('host')->after('service_id')->nullable();
             $table->integer('port')->after('host')->nullable();
             $table->string('database')->after('port')->nullable();
-            $table->string('username')->after('database')->nullable();
-            $table->string('password')->after('username')->nullable();
+            $table->text('username')->after('database')->nullable();
+            $table->text('password')->after('username')->nullable();
         });
     }
 
