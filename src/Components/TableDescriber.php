@@ -56,7 +56,7 @@ trait TableDescriber
                         'type'        => 'array',
                         'description' => 'An array of available relationships to other tables.',
                         'items'       => [
-                            '$ref' => '#/definitions/RelatedSchema',
+                            '$ref' => '#/definitions/RelationshipSchema',
                         ],
                     ],
                 ],
@@ -131,7 +131,7 @@ trait TableDescriber
                         'type'        => 'string',
                         'description' => 'For foreign keys, the referenced table name.',
                     ],
-                    'ref_fields'         => [
+                    'ref_field'          => [
                         'type'        => 'string',
                         'description' => 'For foreign keys, the referenced table field name.',
                     ],
@@ -151,7 +151,7 @@ trait TableDescriber
                     ],
                 ],
             ],
-            'RelatedSchema' => [
+            'RelationshipSchema' => [
                 'type'       => 'object',
                 'properties' => [
                     'name'               => [
@@ -170,7 +170,7 @@ trait TableDescriber
                         'type'        => 'string',
                         'description' => 'The table name that is referenced by the relationship.',
                     ],
-                    'ref_fields'         => [
+                    'ref_field'          => [
                         'type'        => 'string',
                         'description' => 'The field name that is referenced by the relationship.',
                     ],
