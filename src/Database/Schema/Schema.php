@@ -60,10 +60,14 @@ class Schema extends \DreamFactory\Core\Database\Schema\Schema
     /**
      * @inheritdoc
      */
-    public function createTable($table, $schema, $options = null)
+    protected function createTable($table, $options)
     {
-        if (!is_array($options)) {
-            $options = [];
+        if (empty($tableName = array_get($table, 'name'))) {
+            throw new \Exception("No valid name exist in the received table schema.");
+        }
+
+        $options = [];
+        if (!empty($native = array_get($table, 'native'))) {
         }
 
         return $this->connection->getMongoDB()->createCollection($table, $options);
@@ -72,7 +76,7 @@ class Schema extends \DreamFactory\Core\Database\Schema\Schema
     /**
      * @inheritdoc
      */
-    protected function updateTable($table_name, $schema)
+    protected function updateTable($table, $changes)
     {
         // nothing to do here
     }
