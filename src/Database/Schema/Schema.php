@@ -70,7 +70,7 @@ class Schema extends \DreamFactory\Core\Database\Schema\Schema
         if (!empty($native = array_get($table, 'native'))) {
         }
 
-        return $this->connection->getMongoDB()->createCollection($table, $options);
+        return $this->connection->getMongoDB()->createCollection($tableName, $options);
     }
 
     /**
