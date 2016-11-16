@@ -994,9 +994,9 @@ class Table extends BaseNoSqlDbTableResource
 
             case Verbs::MERGE:
             case Verbs::PATCH:
-            if (!empty($relatedInfo)) {
-                $this->updatePreRelations($record, $relatedInfo);
-            }
+                if (!empty($relatedInfo)) {
+                    $this->updatePreRelations($record, $relatedInfo);
+                }
                 if (!empty($updates)) {
                     $parsed = $this->parseRecord($updates, $this->tableFieldsInfo, $ssFilters, true);
                     $updates = $parsed;
