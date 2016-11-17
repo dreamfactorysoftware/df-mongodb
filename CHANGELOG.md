@@ -9,6 +9,12 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+## [0.6.0] - 2016-11-17
+### Changed
+- Columns username and password field type to 'text' in configuration table
+- DB base class changes to support field configuration across all database types
+- Database create and update table methods to allow for native settings
+
 ## [0.5.0] - 2016-10-03
 ### Added
 - DF-826 Extend provisioning to include host, port, etc. to simplify and update configuration to latest models
@@ -67,7 +73,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## 0.1.0 - 2015-10-24
 First official release working with the new [df-core](https://github.com/dreamfactorysoftware/df-core) library.
 
-[Unreleased]: https://github.com/dreamfactorysoftware/df-mongodb/compare/0.5.0...HEAD
+[Unreleased]: https://github.com/dreamfactorysoftware/df-mongodb/compare/0.6.0...HEAD
+[0.6.0]: https://github.com/dreamfactorysoftware/df-mongodb/compare/0.5.0...0.6.0
 [0.5.0]: https://github.com/dreamfactorysoftware/df-mongodb/compare/0.4.0...0.5.0
 [0.4.0]: https://github.com/dreamfactorysoftware/df-mongodb/compare/0.3.1...0.4.0
 [0.3.1]: https://github.com/dreamfactorysoftware/df-mongodb/compare/0.3.0...0.3.1
