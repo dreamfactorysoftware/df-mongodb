@@ -2,15 +2,18 @@
 namespace DreamFactory\Core\MongoDb\Resources;
 
 use DreamFactory\Core\Database\Schema\ColumnSchema;
+use DreamFactory\Core\Database\Schema\RelationSchema;
 use DreamFactory\Core\Enums\ApiOptions;
 use DreamFactory\Core\Enums\DbComparisonOperators;
 use DreamFactory\Core\Enums\DbLogicalOperators;
+use DreamFactory\Core\Enums\DbResourceTypes;
 use DreamFactory\Core\Exceptions\BadRequestException;
 use DreamFactory\Core\Exceptions\InternalServerErrorException;
 use DreamFactory\Core\Exceptions\NotFoundException;
 use DreamFactory\Core\Exceptions\RestException;
 use DreamFactory\Core\MongoDb\Services\MongoDb;
 use DreamFactory\Core\Resources\BaseNoSqlDbTableResource;
+use DreamFactory\Core\Utility\DataFormatter;
 use DreamFactory\Core\Utility\ResourcesWrapper;
 use DreamFactory\Core\Utility\Session;
 use DreamFactory\Library\Utility\Enums\Verbs;
@@ -73,6 +76,7 @@ class Table extends BaseNoSqlDbTableResource
      */
     public function selectTable($name)
     {
+        /** @noinspection PhpUndefinedMethodInspection */
         $coll = $this->parent->getConnection()->getCollection($name);
 
         return $coll;
@@ -86,7 +90,6 @@ class Table extends BaseNoSqlDbTableResource
         $record = static::validateAsArray($record, null, false, 'There are no fields in the record.');
         $coll = $this->selectTable($table);
 
-        $fields = array_get($extras, ApiOptions::FIELDS);
         $ssFilters = array_get($extras, 'ss_filters');
 
         static::removeIds($record, static::DEFAULT_ID_FIELD);
@@ -102,9 +105,7 @@ class Table extends BaseNoSqlDbTableResource
         try {
             $result = $coll->updateMany($criteria, $parsed);
             if ($result->getMatchedCount() > 0) {
-                $result = $coll->find($criteria, ['projection' => static::buildProjection($fields)]);
-
-                return static::cleanRecords($result->toArray());
+                return $this->runQuery($table, $criteria, $extras);
             }
 
             return [];
@@ -121,7 +122,6 @@ class Table extends BaseNoSqlDbTableResource
         $record = static::validateAsArray($record, null, false, 'There are no fields in the record.');
         $coll = $this->selectTable($table);
 
-        $fields = array_get($extras, ApiOptions::FIELDS);
         $ssFilters = array_get($extras, 'ss_filters');
 
         static::removeIds($record, static::DEFAULT_ID_FIELD);
@@ -146,9 +146,7 @@ class Table extends BaseNoSqlDbTableResource
         try {
             $result = $coll->updateMany($criteria, $parsed);
             if ($result->getMatchedCount() > 0) {
-                $result = $coll->find($criteria, ['projection' => static::buildProjection($fields)]);
-
-                return static::cleanRecords($result->toArray());
+                return $this->runQuery($table, $criteria, $extras);
             }
 
             return [];
@@ -188,17 +186,16 @@ class Table extends BaseNoSqlDbTableResource
 
         $coll = $this->selectTable($table);
 
-        $fields = array_get($extras, ApiOptions::FIELDS);
         $ssFilters = array_get($extras, 'ss_filters');
 
         // build criteria from filter parameters
         $criteria = static::buildCriteriaArray($filter, $params, $ssFilters);
 
         try {
-            $result = $coll->find($criteria, ['projection' => static::buildProjection($fields)]);
+            $data = $this->runQuery($table, $criteria, $extras);
             $coll->deleteMany($criteria);
 
-            return static::cleanRecords($result->toArray());
+            return $data;
         } catch (\Exception $ex) {
             throw new InternalServerErrorException("Failed to delete records from '$table'.\n{$ex->getMessage()}");
         }
@@ -209,64 +206,16 @@ class Table extends BaseNoSqlDbTableResource
      */
     public function retrieveRecordsByFilter($table, $filter = null, $params = [], $extras = [])
     {
-        $coll = $this->selectTable($table);
-
-        $fields = array_get($extras, ApiOptions::FIELDS);
-        $ssFilters = array_get($extras, 'ss_filters');
-
-        $criteria = static::buildCriteriaArray($filter, $params, $ssFilters);
-
-        $limit = intval(array_get($extras, ApiOptions::LIMIT, 0));
-        $offset = intval(array_get($extras, ApiOptions::OFFSET, 0));
-        $sort = static::buildSortArray(array_get($extras, ApiOptions::ORDER));
-        $countOnly = Scalar::boolval(array_get($extras, ApiOptions::COUNT_ONLY));
-        $includeCount = Scalar::boolval(array_get($extras, ApiOptions::INCLUDE_COUNT, false));
-        $maxAllowed = static::getMaxRecordsReturnedLimit();
-        $needLimit = false;
-        if (($limit < 1) || ($limit > $maxAllowed)) {
-            // impose a limit to protect server
-            $limit = $maxAllowed;
-            $needLimit = true;
+        $schema = $this->parent->getSchema()->getResource(DbResourceTypes::TYPE_TABLE, $table);
+        if (!$schema) {
+            throw new NotFoundException("Table '$table' does not exist in the database.");
         }
 
+        $ssFilters = array_get($extras, 'ss_filters');
+        $criteria = static::buildCriteriaArray($filter, $params, $ssFilters);
+
         try {
-            $options = [];
-            if ($offset) {
-                $options['skip'] = $offset;
-            }
-            if ($sort) {
-                $options['sort'] = $sort;
-            }
-            $options['limit'] = $limit;
-
-            $options['projection'] = static::buildProjection($fields);
-            $options['typeMap'] = ['root' => 'array', 'document' => 'array'];
-
-            // count total records
-            $count = ($countOnly || $includeCount || $needLimit) ? $coll->count($criteria) : 0;
-
-            if ($countOnly) {
-                return $count;
-            }
-
-            $result = $coll->find($criteria, $options);
-            $data = static::cleanRecords($result->toArray());
-
-            $meta = [];
-            if ($includeCount || $needLimit) {
-                if ($includeCount || $count > $maxAllowed) {
-                    $meta['count'] = $count;
-                }
-                if (($count - $offset) > $limit) {
-                    $meta['next'] = $offset + $limit;
-                }
-            }
-
-            if (!empty($meta)) {
-                $data['meta'] = $meta;
-            }
-
-            return $data;
+            return $this->runQuery($table, $criteria, $extras);
         } catch (\Exception $ex) {
             throw new InternalServerErrorException("Failed to filter records from '$table'.\n{$ex->getMessage()}");
         }
@@ -735,8 +684,11 @@ class Table extends BaseNoSqlDbTableResource
                     } elseif ($data instanceof Timestamp) {
                         $data = (string)$data;
                     } elseif ($data instanceof UTCDateTime) {
+                        if (empty($cfgFormat = DataFormatter::getDateTimeFormat('datetime'))) {
+                            $cfgFormat = 'c';
+                        }
                         $data = $data->toDateTime();
-                        $data = ['$date' => $data];
+                        $data = ['$date' => $data->format($cfgFormat)];
                     } elseif ($data instanceof Binary) {
                         $data = $data->getData();
                     }
@@ -766,11 +718,11 @@ class Table extends BaseNoSqlDbTableResource
                                 $temp = $data['$date'];
                                 if (empty($temp)) {
                                     // empty means create with current time
-                                    $record[$key] = new \MongoDate();
+                                    $record[$key] = new UTCDateTime(time() * 1000);
                                 } elseif (is_string($temp)) {
-                                    $record[$key] = new \MongoDate(strtotime($temp));
+                                    $record[$key] = new UTCDateTime(strtotime($temp) * 1000);
                                 } elseif (is_int($temp)) {
-                                    $record[$key] = new \MongoDate($temp);
+                                    $record[$key] = new UTCDateTime($temp * 1000);
                                 }
                             } elseif (isset($data['$id'])) {
                                 $record[$key] = static::idToMongoId($data['$id']);
@@ -875,7 +827,7 @@ class Table extends BaseNoSqlDbTableResource
 
     protected function getCurrentTimestamp()
     {
-        return new \MongoDate();
+        return new UTCDateTime(time() * 1000);
     }
 
     /**
@@ -925,16 +877,23 @@ class Table extends BaseNoSqlDbTableResource
         $rollback = false,
         $continue = false,
         $single = false
-    ){
+    ) {
         $ssFilters = array_get($extras, 'ss_filters');
         $fields = array_get($extras, ApiOptions::FIELDS);
-        $requireMore = array_get($extras, 'require_more');
+        $related = array_get($extras, 'related');
+        $requireMore = Scalar::boolval(array_get($extras, 'require_more')) || !empty($related);
+        $allowRelatedDelete = Scalar::boolval(array_get($extras, 'allow_related_delete'));
+        $relatedInfo = $this->describeTableRelated($this->transactionTable);
         $updates = array_get($extras, 'updates');
         $options = [];
 
         $out = [];
         switch ($this->getAction()) {
             case Verbs::POST:
+                if (!empty($relatedInfo)) {
+                    $this->updatePreRelations($record, $relatedInfo);
+                }
+
                 $parsed = $this->parseRecord($record, $this->tableFieldsInfo, $ssFilters);
                 if (empty($parsed)) {
                     throw new BadRequestException('No valid fields were found in record.');
@@ -953,12 +912,24 @@ class Table extends BaseNoSqlDbTableResource
                     $out = [static::DEFAULT_ID_FIELD => static::mongoIdToId($id)];
                 }
 
+                if (!empty($relatedInfo)) {
+                    $this->updatePostRelations(
+                        $this->transactionTable,
+                        $record,
+                        $relatedInfo,
+                        $allowRelatedDelete
+                    );
+                }
+
                 if ($rollback) {
                     $this->addToRollback($id);
                 }
                 break;
 
             case Verbs::PUT:
+                if (!empty($relatedInfo)) {
+                    $this->updatePreRelations($record, $relatedInfo);
+                }
                 if (!empty($updates)) {
                     $parsed = $this->parseRecord($updates, $this->tableFieldsInfo, $ssFilters, true);
                     $updates = $parsed;
@@ -1003,6 +974,15 @@ class Table extends BaseNoSqlDbTableResource
                     } else {
                         $out = static::fromMongoObjects($result);
                     }
+
+                    if (!empty($relatedInfo)) {
+                        $this->updatePostRelations(
+                            $this->transactionTable,
+                            $out,
+                            $relatedInfo,
+                            $allowRelatedDelete
+                        );
+                    }
                 } else {
                     $result = $this->collection->replaceOne($criteria, $updates, $options);
                     if (1 > $result->getMatchedCount()) {
@@ -1014,6 +994,9 @@ class Table extends BaseNoSqlDbTableResource
 
             case Verbs::MERGE:
             case Verbs::PATCH:
+                if (!empty($relatedInfo)) {
+                    $this->updatePreRelations($record, $relatedInfo);
+                }
                 if (!empty($updates)) {
                     $parsed = $this->parseRecord($updates, $this->tableFieldsInfo, $ssFilters, true);
                     $updates = $parsed;
@@ -1059,6 +1042,15 @@ class Table extends BaseNoSqlDbTableResource
                         }
                     } else {
                         $out = static::fromMongoObjects($result);
+                    }
+
+                    if (!empty($relatedInfo)) {
+                        $this->updatePostRelations(
+                            $this->transactionTable,
+                            $out,
+                            $relatedInfo,
+                            $allowRelatedDelete
+                        );
                     }
                 } else {
                     $result = $this->collection->updateOne($criteria, $updates, $options);
@@ -1129,7 +1121,6 @@ class Table extends BaseNoSqlDbTableResource
 
         $updates = array_get($extras, 'updates');
         $ssFilters = array_get($extras, 'ss_filters');
-        $fields = array_get($extras, ApiOptions::FIELDS);
         $requireMore = array_get($extras, 'require_more');
 
         $out = [];
@@ -1138,7 +1129,7 @@ class Table extends BaseNoSqlDbTableResource
                 $result = $this->collection->insertMany($this->batchRecords, ['ordered' => false]);
                 $this->batchIds = $result->getInsertedIds();
                 if ($requireMore) {
-                    $out = $this->findByIds($this->batchIds, $fields, $ssFilters);
+                    $out = $this->findByIds($this->batchIds, $extras);
                 } else {
                     $out = static::idsAsRecords(static::mongoIdsToIds($this->batchIds), static::DEFAULT_ID_FIELD);
                 }
@@ -1162,7 +1153,7 @@ class Table extends BaseNoSqlDbTableResource
                 }
 
                 if ($requireMore) {
-                    $out = $this->findByIds($this->batchIds, $fields, $ssFilters);
+                    $out = $this->findByIds($this->batchIds, $extras);
                 } else {
                     $out = static::idsAsRecords(static::mongoIdsToIds($this->batchIds), static::DEFAULT_ID_FIELD);
                 }
@@ -1189,7 +1180,7 @@ class Table extends BaseNoSqlDbTableResource
                 }
 
                 if ($requireMore) {
-                    $out = $this->findByIds($this->batchIds, $fields, $ssFilters);
+                    $out = $this->findByIds($this->batchIds, $extras);
                 } else {
                     $out = static::idsAsRecords(static::mongoIdsToIds($this->batchIds), static::DEFAULT_ID_FIELD);
                 }
@@ -1197,7 +1188,7 @@ class Table extends BaseNoSqlDbTableResource
 
             case Verbs::DELETE:
                 if ($requireMore) {
-                    $out = $this->findByIds($this->batchIds, $fields, $ssFilters);
+                    $out = $this->findByIds($this->batchIds, $extras);
                 } else {
                     $out = static::idsAsRecords(static::mongoIdsToIds($this->batchIds), static::DEFAULT_ID_FIELD);
                 }
@@ -1216,7 +1207,7 @@ class Table extends BaseNoSqlDbTableResource
                 break;
 
             case Verbs::GET:
-                $out = $this->findByIds($this->batchIds, $fields, $ssFilters);
+                $out = $this->findByIds($this->batchIds, $extras);
                 break;
 
             default:
@@ -1266,23 +1257,16 @@ class Table extends BaseNoSqlDbTableResource
         return true;
     }
 
-    protected function findByIds($ids, $fields, $ss_filters = [])
+    protected function findByIds($ids, $extras)
     {
         $filter = [static::DEFAULT_ID_FIELD => ['$in' => $ids]];
-        $criteria = static::buildCriteriaArray($filter, null, $ss_filters);
-        $options =
-            [
-                'typeMap'    => ['root' => 'array', 'document' => 'array'],
-                'projection' => static::buildProjection($fields)
-            ];
-
-        $result = $this->collection->find($criteria, $options);
+        $ssFilters = array_get($extras, 'ss_filters');
+        $criteria = static::buildCriteriaArray($filter, null, $ssFilters);
+        $result = $this->runQuery($this->collection->getCollectionName(), $criteria, $extras);
         if (empty($result)) {
             throw new NotFoundException('No records were found using the given identifiers.');
         }
 
-        $result = $result->toArray();
-        $out = static::cleanRecords($result);
         if (count($this->batchIds) !== count($result)) {
             $out = [];
             $errors = [];
@@ -1290,7 +1274,7 @@ class Table extends BaseNoSqlDbTableResource
                 $found = false;
                 foreach ($result as $record) {
                     if ($id == array_get($record, static::DEFAULT_ID_FIELD)) {
-                        $out[$index] = static::cleanRecord($record);
+                        $out[$index] = $record;
                         $found = true;
                         continue;
                     }
@@ -1304,11 +1288,91 @@ class Table extends BaseNoSqlDbTableResource
             if (!empty($errors)) {
                 $wrapper = ResourcesWrapper::getWrapper();
                 $context = ['error' => $errors, $wrapper => $out];
-                throw new NotFoundException('Batch Error: Not all records could be retrieved.', null, null,
-                    $context);
+                throw new NotFoundException('Batch Error: Not all records could be retrieved.', null, null, $context);
+            }
+
+            return $out;
+        }
+
+        return $result;
+    }
+
+    protected function runQuery($table, $criteria, $extras)
+    {
+        $collection = $this->selectTable($table);
+        $schema = $this->parent->getSchema()->getResource(DbResourceTypes::TYPE_TABLE, $table);
+        if (!$schema) {
+            throw new NotFoundException("Table '$table' does not exist in the database.");
+        }
+
+        $fields = array_get($extras, ApiOptions::FIELDS);
+        $related = array_get($extras, ApiOptions::RELATED);
+        /** @type RelationSchema[] $availableRelations */
+        $availableRelations = $schema->getRelations(true);
+        // see if we need to add anymore fields to select for related retrieval
+        if (('*' !== $fields) && !empty($availableRelations) && (!empty($related) || $schema->fetchRequiresRelations)) {
+            foreach ($availableRelations as $relation) {
+                if (false === array_search($relation->field, $fields)) {
+                    $select[] = $relation->field;
+                }
             }
         }
 
-        return $out;
+        $limit = intval(array_get($extras, ApiOptions::LIMIT, 0));
+        $offset = intval(array_get($extras, ApiOptions::OFFSET, 0));
+        $sort = static::buildSortArray(array_get($extras, ApiOptions::ORDER));
+        $countOnly = Scalar::boolval(array_get($extras, ApiOptions::COUNT_ONLY));
+        $includeCount = Scalar::boolval(array_get($extras, ApiOptions::INCLUDE_COUNT, false));
+        $maxAllowed = static::getMaxRecordsReturnedLimit();
+        $needLimit = false;
+        if (($limit < 1) || ($limit > $maxAllowed)) {
+            // impose a limit to protect server
+            $limit = $maxAllowed;
+            $needLimit = true;
+        }
+
+        $options = [];
+        if ($offset) {
+            $options['skip'] = $offset;
+        }
+        if ($sort) {
+            $options['sort'] = $sort;
+        }
+        $options['limit'] = $limit;
+
+        $options['projection'] = static::buildProjection($fields);
+        $options['typeMap'] = ['root' => 'array', 'document' => 'array'];
+
+        // count total records
+        $count = ($countOnly || $includeCount || $needLimit) ? $collection->count($criteria) : 0;
+
+        if ($countOnly) {
+            return $count;
+        }
+
+        $result = $collection->find($criteria, $options);
+        $data = static::cleanRecords($result->toArray());
+
+        if (!empty($data) && (!empty($related) || $schema->fetchRequiresRelations)) {
+            if (!empty($availableRelations)) {
+                $this->retrieveRelatedRecords($schema, $availableRelations, $related, $data);
+            }
+        }
+
+        $meta = [];
+        if ($includeCount || $needLimit) {
+            if ($includeCount || $count > $maxAllowed) {
+                $meta['count'] = $count;
+            }
+            if (($count - $offset) > $limit) {
+                $meta['next'] = $offset + $limit;
+            }
+        }
+
+        if (!empty($meta)) {
+            $data['meta'] = $meta;
+        }
+
+        return $data;
     }
 }

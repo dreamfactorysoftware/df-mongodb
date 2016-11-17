@@ -1,16 +1,12 @@
 <?php
 namespace DreamFactory\Core\MongoDb\Services;
 
-use DreamFactory\Core\Components\DbSchemaExtras;
 use DreamFactory\Core\Components\RequireExtensions;
-use DreamFactory\Core\Contracts\CacheInterface;
-use DreamFactory\Core\Contracts\DbExtrasInterface;
-use DreamFactory\Core\Contracts\SchemaInterface;
-use DreamFactory\Core\Database\Schema\TableSchema;
 use DreamFactory\Core\Exceptions\InternalServerErrorException;
-use DreamFactory\Core\MongoDb\Resources\Schema;
+use DreamFactory\Core\MongoDb\Database\Schema\Schema as DatabaseSchema;
 use DreamFactory\Core\MongoDb\Resources\Table;
-use DreamFactory\Core\Services\BaseNoSqlDbService;
+use DreamFactory\Core\Resources\DbSchemaResource;
+use DreamFactory\Core\Services\BaseDbService;
 use DreamFactory\Core\Utility\Session;
 use Illuminate\Database\DatabaseManager;
 use Jenssegers\Mongodb\Connection;
@@ -21,13 +17,13 @@ use Jenssegers\Mongodb\Connection;
  * A service to handle MongoDB NoSQL (schema-less) database
  * services accessed through the REST API.
  */
-class MongoDb extends BaseNoSqlDbService implements CacheInterface, DbExtrasInterface
+class MongoDb extends BaseDbService
 {
     //*************************************************************************
     //	Traits
     //*************************************************************************
 
-    use DbSchemaExtras, RequireExtensions;
+    use RequireExtensions;
 
     //*************************************************************************
     //	Constants
@@ -51,24 +47,12 @@ class MongoDb extends BaseNoSqlDbService implements CacheInterface, DbExtrasInte
      */
     protected $dbConn = null;
     /**
-     * @var SchemaInterface
-     */
-    protected $schema = null;
-    /**
-     * @var array
-     */
-    protected $tableNames = [];
-    /**
-     * @var array
-     */
-    protected $tables = [];
-    /**
      * @var array
      */
     protected static $resources = [
-        Schema::RESOURCE_NAME => [
-            'name'       => Schema::RESOURCE_NAME,
-            'class_name' => Schema::class,
+        DbSchemaResource::RESOURCE_NAME => [
+            'name'       => DbSchemaResource::RESOURCE_NAME,
+            'class_name' => DbSchemaResource::class,
             'label'      => 'Schema',
         ],
         Table::RESOURCE_NAME  => [
@@ -142,8 +126,7 @@ class MongoDb extends BaseNoSqlDbService implements CacheInterface, DbExtrasInte
         /** @type DatabaseManager $db */
         $db = app('db');
         $this->dbConn = $db->connection('service.' . $this->name);
-        $this->schema = new \DreamFactory\Core\MongoDb\Database\Schema\Schema($this->dbConn);
-
+        $this->schema = new DatabaseSchema($this->dbConn);
         $this->schema->setCache($this);
         $this->schema->setExtraStore($this);
     }
@@ -153,67 +136,31 @@ class MongoDb extends BaseNoSqlDbService implements CacheInterface, DbExtrasInte
      */
     public function __destruct()
     {
-        try {
-            /** @type DatabaseManager $db */
-            $db = app('db');
-            $db->disconnect('service.' . $this->name);
-            $this->dbConn = null;
-        } catch (\Exception $ex) {
-            error_log("Failed to disconnect from database.\n{$ex->getMessage()}");
-        }
+        /** @type DatabaseManager $db */
+        $db = app('db');
+        $db->disconnect('service.' . $this->name);
+
+        parent::__destruct();
     }
 
     /**
-     * @throws \Exception
-     * @return Connection
+     * {@inheritdoc}
      */
-    public function getConnection()
+    public function getResources($only_handlers = false)
     {
-        if (!isset($this->dbConn)) {
-            throw new InternalServerErrorException('Database connection has not been initialized.');
-        }
+        $resources = [
+            DbSchemaResource::RESOURCE_NAME => [
+                'name'       => DbSchemaResource::RESOURCE_NAME,
+                'class_name' => DbSchemaResource::class,
+                'label'      => 'Schema',
+            ],
+            Table::RESOURCE_NAME  => [
+                'name'       => Table::RESOURCE_NAME,
+                'class_name' => Table::class,
+                'label'      => 'Tables',
+            ]
+        ];
 
-        return $this->dbConn;
-    }
-
-    /**
-     * @throws \Exception
-     * @return SchemaInterface
-     */
-    public function getSchema()
-    {
-        if (!isset($this->schema)) {
-            throw new InternalServerErrorException('Database schema extension has not been initialized.');
-        }
-
-        return $this->schema;
-    }
-
-    /**
-     * @param null $schema
-     * @param bool $refresh
-     * @param bool $use_alias
-     *
-     * @return array|TableSchema[]|mixed
-     */
-    public function getTableNames($schema = null, $refresh = false, $use_alias = false)
-    {
-        /** @type TableSchema[] $tables */
-        $tables = $this->schema->getTableNames($schema, true, $refresh);
-        if ($use_alias) {
-            $temp = []; // reassign index to alias
-            foreach ($tables as $table) {
-                $temp[strtolower($table->getName(true))] = $table;
-            }
-
-            return $temp;
-        }
-
-        return $tables;
-    }
-
-    public function refreshTableCache()
-    {
-        $this->schema->refresh();
+        return ($only_handlers) ? $resources : array_values($resources);
     }
 }
