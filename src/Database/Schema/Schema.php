@@ -46,9 +46,7 @@ class Schema extends \DreamFactory\Core\Database\Components\Schema
         $collections = $db->listCollections();
         foreach ($collections as $collection) {
             $name = $collection->getName();
-            $internalName = $quotedName = $tableName = $name;
-            $settings = compact('tableName', 'name', 'internalName','quotedName');
-            $tables[strtolower($name)] = new TableSchema($settings);
+            $tables[strtolower($name)] = new TableSchema(['name' => $name]);
         }
 
         return $tables;
