@@ -88,12 +88,9 @@ class Schema extends \DreamFactory\Core\Database\Components\Schema
     }
 
     /**
-     * @param $table
-     * @param $column
-     *
-     * @return bool|int
+     * @inheritdoc
      */
-    public function dropColumn($table, $column)
+    public function dropColumns($table, $column)
     {
         // Do nothing here for now
         return false;
