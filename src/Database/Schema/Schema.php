@@ -71,7 +71,7 @@ class Schema extends \DreamFactory\Core\Database\Components\Schema
     /**
      * @inheritdoc
      */
-    protected function updateTable($table, $changes)
+    protected function updateTable($tableSchema, $changes)
     {
         // nothing to do here
     }
