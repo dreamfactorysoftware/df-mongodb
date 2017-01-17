@@ -3,7 +3,7 @@
   "description": "The DreamFactory(tm) MongoDB Service.",
   "keywords":    [
     "dreamfactory",
-    "dsp",
+    "api",
     "rest",
     "mongodb",
     "nosql",
@@ -29,8 +29,9 @@
     "wiki":   "https://wiki.dreamfactory.com"
   },
   "require":     {
-    "jenssegers/mongodb":       "3.0.*",
-    "dreamfactory/df-database": "~0.1.0"
+    "dreamfactory/df-core":     "~0.7.0",
+    "dreamfactory/df-database": "~0.1.0",
+    "jenssegers/mongodb":       "3.0.*"
   },
   "autoload":    {
     "psr-4": {
@@ -39,7 +40,7 @@
   },
   "extra":       {
     "branch-alias": {
-      "dev-develop": "0.6.x-dev"
+      "dev-develop": "0.7.x-dev"
     }
   }
 }
