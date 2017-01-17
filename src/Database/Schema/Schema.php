@@ -2,14 +2,13 @@
 namespace DreamFactory\Core\MongoDb\Database\Schema;
 
 use DreamFactory\Core\Database\Schema\TableSchema;
-use DreamFactory\Core\Enums\DbSimpleTypes;
 use Jenssegers\Mongodb\Connection;
 use MongoDB\Model\CollectionInfo;
 
 /**
  * Schema is the class for retrieving metadata information from a MongoDB database (version 4.1.x and 5.x).
  */
-class Schema extends \DreamFactory\Core\Database\Schema\Schema
+class Schema extends \DreamFactory\Core\Database\Components\Schema
 {
     /**
      * @var Connection
@@ -36,7 +35,7 @@ class Schema extends \DreamFactory\Core\Database\Schema\Schema
     /**
      * @inheritdoc
      */
-    protected function findTableNames($schema = '', $include_views = true)
+    protected function findTableNames($schema = '')
     {
         $tables = [];
         /** @type \MongoDB\Database $db */
@@ -47,11 +46,7 @@ class Schema extends \DreamFactory\Core\Database\Schema\Schema
         $collections = $db->listCollections();
         foreach ($collections as $collection) {
             $name = $collection->getName();
-            $tables[strtolower($name)] = new TableSchema([
-                'schemaName' => $schema,
-                'tableName'  => $name,
-                'name'       => $name,
-            ]);
+            $tables[strtolower($name)] = new TableSchema(['name' => $name]);
         }
 
         return $tables;
@@ -76,7 +71,7 @@ class Schema extends \DreamFactory\Core\Database\Schema\Schema
     /**
      * @inheritdoc
      */
-    protected function updateTable($table, $changes)
+    protected function updateTable($tableSchema, $changes)
     {
         // nothing to do here
     }
@@ -93,12 +88,9 @@ class Schema extends \DreamFactory\Core\Database\Schema\Schema
     }
 
     /**
-     * @param $table
-     * @param $column
-     *
-     * @return bool|int
+     * @inheritdoc
      */
-    public function dropColumn($table, $column)
+    public function dropColumns($table, $column)
     {
         // Do nothing here for now
         return false;

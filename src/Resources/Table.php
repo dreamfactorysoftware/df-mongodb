@@ -12,7 +12,7 @@ use DreamFactory\Core\Exceptions\InternalServerErrorException;
 use DreamFactory\Core\Exceptions\NotFoundException;
 use DreamFactory\Core\Exceptions\RestException;
 use DreamFactory\Core\MongoDb\Services\MongoDb;
-use DreamFactory\Core\Resources\BaseNoSqlDbTableResource;
+use DreamFactory\Core\Database\Resources\BaseNoSqlDbTableResource;
 use DreamFactory\Core\Utility\DataFormatter;
 use DreamFactory\Core\Utility\ResourcesWrapper;
 use DreamFactory\Core\Utility\Session;
@@ -843,7 +843,6 @@ class Table extends BaseNoSqlDbTableResource
     protected function parseRecord($record, $fields_info, $filter_info = null, $for_update = false, $old_record = null)
     {
         switch ($this->getAction()) {
-            case Verbs::MERGE:
             case Verbs::PATCH:
                 if (static::doesRecordContainModifier($record)) {
                     return $this->interpretRecordValues($record);
@@ -992,7 +991,6 @@ class Table extends BaseNoSqlDbTableResource
                 }
                 break;
 
-            case Verbs::MERGE:
             case Verbs::PATCH:
                 if (!empty($relatedInfo)) {
                     $this->updatePreRelations($record, $relatedInfo);
@@ -1159,7 +1157,6 @@ class Table extends BaseNoSqlDbTableResource
                 }
                 break;
 
-            case Verbs::MERGE:
             case Verbs::PATCH:
                 if (empty($updates)) {
                     throw new BadRequestException('Batch operation not supported for patch by records.');
@@ -1235,7 +1232,6 @@ class Table extends BaseNoSqlDbTableResource
 
                 case Verbs::PUT:
                 case Verbs::PATCH:
-                case Verbs::MERGE:
                     foreach ($this->rollbackRecords as $record) {
                         $filter = [static::DEFAULT_ID_FIELD => $record[static::DEFAULT_ID_FIELD]];
                         $this->collection->replaceOne($filter, $record, ['upsert' => true]);
