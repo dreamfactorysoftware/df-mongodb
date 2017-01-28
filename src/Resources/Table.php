@@ -857,6 +857,19 @@ class Table extends BaseNoSqlDbTableResource
     }
 
     /**
+     * @inheritdoc
+     */
+    protected function parseValueForSet($value, $field_info, $for_update = false)
+    {
+        if (static::DEFAULT_ID_FIELD === $field_info->name) {
+            // Native ID can be int or string or MongoID
+            return $value;
+        } else {
+            return parent::parseValueForSet($value, $field_info, $for_update);
+        }
+    }
+
+    /**
      * {@inheritdoc}
      */
     protected function initTransaction($table_name, &$id_fields = null, $id_types = null, $require_ids = true)
