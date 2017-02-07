@@ -13,9 +13,9 @@ class ServiceProvider extends MongodbServiceProvider
 {
     use ServiceDocBuilder;
 
-    public function boot()
+    public function register()
     {
-        parent::boot();
+        parent::register();
 
         // Add our service types.
         $this->app->resolving('df.service', function (ServiceManager $df) {
@@ -35,6 +35,11 @@ class ServiceProvider extends MongodbServiceProvider
                 ])
             );
         });
+    }
+
+    public function boot()
+    {
+        parent::boot();
 
         // add migrations
         $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
