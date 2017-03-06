@@ -36,4 +36,12 @@ class ServiceProvider extends MongodbServiceProvider
             );
         });
     }
+
+    public function boot()
+    {
+        parent::boot();
+
+        // add migrations
+        $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
+    }
 }

@@ -8,13 +8,13 @@ use DreamFactory\Core\Enums\DbComparisonOperators;
 use DreamFactory\Core\Enums\DbLogicalOperators;
 use DreamFactory\Core\Enums\DbResourceTypes;
 use DreamFactory\Core\Exceptions\BadRequestException;
+use DreamFactory\Core\Exceptions\BatchException;
 use DreamFactory\Core\Exceptions\InternalServerErrorException;
 use DreamFactory\Core\Exceptions\NotFoundException;
 use DreamFactory\Core\Exceptions\RestException;
 use DreamFactory\Core\MongoDb\Services\MongoDb;
 use DreamFactory\Core\Database\Resources\BaseNoSqlDbTableResource;
 use DreamFactory\Core\Utility\DataFormatter;
-use DreamFactory\Core\Utility\ResourcesWrapper;
 use DreamFactory\Core\Utility\Session;
 use DreamFactory\Library\Utility\Enums\Verbs;
 use DreamFactory\Library\Utility\Scalar;
@@ -1160,7 +1160,7 @@ class Table extends BaseNoSqlDbTableResource
                 }
 
                 if (count($this->batchIds) !== $result->getMatchedCount()) {
-                    throw new BadRequestException('Batch Error: Not all requested records were deleted.');
+                    throw new BadRequestException('Batch Error: Not all requested records could be deleted.');
                 }
 
                 if ($requireMore) {
@@ -1186,7 +1186,7 @@ class Table extends BaseNoSqlDbTableResource
                 }
 
                 if (count($this->batchIds) !== $result->getMatchedCount()) {
-                    throw new BadRequestException('Batch Error: Not all requested records were deleted.');
+                    throw new BadRequestException('Batch Error: Not all requested records could be deleted.');
                 }
 
                 if ($requireMore) {
@@ -1212,7 +1212,7 @@ class Table extends BaseNoSqlDbTableResource
                 }
 
                 if (count($this->batchIds) !== $result->getDeletedCount()) {
-                    throw new BadRequestException('Batch Error: Not all requested records were deleted.');
+                    throw new BadRequestException('Batch Error: Not all requested records could be deleted.');
                 }
                 break;
 
@@ -1278,7 +1278,7 @@ class Table extends BaseNoSqlDbTableResource
 
         if (count($this->batchIds) !== count($result)) {
             $out = [];
-            $errors = [];
+            $errors = false;
             foreach ($this->batchIds as $index => $id) {
                 $found = false;
                 foreach ($result as $record) {
@@ -1289,15 +1289,13 @@ class Table extends BaseNoSqlDbTableResource
                     }
                 }
                 if (!$found) {
-                    $errors[] = $index;
-                    $out[$index] = "Record with identifier '" . print_r($id, true) . "' not found.";
+                    $errors = true;
+                    $out[$index] = new NotFoundException("Record with identifier '" . print_r($id, true) . "' not found.");
                 }
             }
 
-            if (!empty($errors)) {
-                $wrapper = ResourcesWrapper::getWrapper();
-                $context = ['error' => $errors, $wrapper => $out];
-                throw new NotFoundException('Batch Error: Not all records could be retrieved.', null, null, $context);
+            if ($errors) {
+                throw new BatchException($out, 'Batch Error: Not all requested records could be retrieved.');
             }
 
             return $out;
