@@ -222,12 +222,7 @@ class Table extends BaseNoSqlDbTableResource
     }
 
     /**
-     * @param      $table
-     * @param null $fields_info
-     * @param null $requested_fields
-     * @param null $requested_types
-     *
-     * @return array
+     * {@inheritdoc}
      */
     protected function getIdsInfo($table, $fields_info = null, &$requested_fields = null, $requested_types = null)
     {
@@ -910,20 +905,12 @@ class Table extends BaseNoSqlDbTableResource
                     throw new BadRequestException('No valid fields were found in record.');
                 }
 
-                $upsert = Scalar::boolval(array_get($extras, ApiOptions::UPSERT));
-                if (!$continue && !$rollback && !$single && !$upsert) {
+                if (!$continue && !$rollback && !$single) {
                     return parent::addToTransaction($parsed, $id);
                 }
 
-                if ($id && $upsert) {
-                    $filter = [static::DEFAULT_ID_FIELD => static::idToMongoId($id)];
-                    $criteria = $this->buildCriteriaArray($filter, null, $ssFilters);
-                    $options['upsert'] = true;
-                    $this->collection->replaceOne($criteria, $parsed, $options);
-                } else {
-                    $result = $this->collection->insertOne($parsed, $options);
-                    $id = $result->getInsertedId();
-                }
+                $result = $this->collection->insertOne($parsed, $options);
+                $id = $result->getInsertedId();
                 if ($requireMore) {
                     $parsed[static::DEFAULT_ID_FIELD] = $id;
                     $out = static::cleanRecord($parsed, $fields, static::DEFAULT_ID_FIELD);
@@ -960,7 +947,7 @@ class Table extends BaseNoSqlDbTableResource
                 }
 
                 // only update/patch by ids can use batching
-                $upsert = Scalar::boolval(array_get($extras, ApiOptions::UPSERT));
+                $upsert = $this->parent->upsertAllowed();
                 if (!$continue && !$rollback && !$single && !empty($updates) && !$upsert) {
                     return parent::addToTransaction(null, static::idToMongoId($id));
                 }
@@ -1299,7 +1286,8 @@ class Table extends BaseNoSqlDbTableResource
                 }
                 if (!$found) {
                     $errors = true;
-                    $out[$index] = new NotFoundException("Record with identifier '" . print_r($id, true) . "' not found.");
+                    $out[$index] = new NotFoundException("Record with identifier '" . print_r($id,
+                            true) . "' not found.");
                 }
             }
 
