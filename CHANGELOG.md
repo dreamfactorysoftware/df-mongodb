@@ -3,10 +3,12 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+
+## [0.9.0] - 2017-04-21
 ### Added
 - DF-811 Add support for upsert
 ### Changed
-### Fixed
+- Use new service config handling for database configuration
 
 ## [0.8.0] - 2017-03-03
 - Major restructuring to upgrade to Laravel 5.4 and be more dynamically available
@@ -84,7 +86,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## 0.1.0 - 2015-10-24
 First official release working with the new [df-core](https://github.com/dreamfactorysoftware/df-core) library.
 
-[Unreleased]: https://github.com/dreamfactorysoftware/df-mongodb/compare/0.8.0...HEAD
+[Unreleased]: https://github.com/dreamfactorysoftware/df-mongodb/compare/0.9.0...HEAD
+[0.9.0]: https://github.com/dreamfactorysoftware/df-mongodb/compare/0.8.0...0.9.0
 [0.8.0]: https://github.com/dreamfactorysoftware/df-mongodb/compare/0.7.1...0.8.0
 [0.7.1]: https://github.com/dreamfactorysoftware/df-mongodb/compare/0.7.0...0.7.1
 [0.7.0]: https://github.com/dreamfactorysoftware/df-mongodb/compare/0.6.0...0.7.0
