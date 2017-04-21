@@ -2,8 +2,9 @@
 namespace DreamFactory\Core\MongoDb\Models;
 
 use DreamFactory\Core\Components\RequireExtensions;
+use DreamFactory\Core\Database\Components\SupportsUpsert;
 use DreamFactory\Core\Exceptions\BadRequestException;
-use DreamFactory\Core\Models\CacheableServiceConfig;
+use DreamFactory\Core\Models\BaseServiceConfigModel;
 use DreamFactory\Core\MongoDb\Services\MongoDb;
 
 /**
@@ -21,9 +22,9 @@ use DreamFactory\Core\MongoDb\Services\MongoDb;
  *
  * @method static MongoDbConfig whereServiceId($value)
  */
-class MongoDbConfig extends CacheableServiceConfig
+class MongoDbConfig extends BaseServiceConfigModel
 {
-    use RequireExtensions;
+    use RequireExtensions, SupportsUpsert;
 
     protected $table = 'mongodb_config';
 
@@ -53,15 +54,15 @@ class MongoDbConfig extends CacheableServiceConfig
     /**
      * {@inheritdoc}
      */
-    public static function validateConfig($config, $create = true)
+    public function validate($data, $throwException = true)
     {
         static::checkExtensions(['mongodb']);
 
-        if (empty(array_get($config, 'database')) && empty(array_get($config, 'options.db')) &&
-            empty(array_get($config, 'options.database'))
+        if (empty(array_get($data, 'database')) && empty(array_get($data, 'options.db')) &&
+            empty(array_get($data, 'options.database'))
         ) {
             //  Attempt to find db in connection string
-            $dsn = strval(array_get($config, 'dsn'));
+            $dsn = strval(array_get($data, 'dsn'));
             $db = strstr(substr($dsn, MongoDb::DSN_PREFIX_LENGTH), '/');
             if (false !== $pos = strpos($db, '?')) {
                 $db = substr($db, 0, $pos);
@@ -73,7 +74,7 @@ class MongoDbConfig extends CacheableServiceConfig
         }
 
 
-        return true;
+        return parent::validate($data, $throwException);
     }
 
     /**

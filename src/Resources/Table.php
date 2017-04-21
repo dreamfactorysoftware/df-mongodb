@@ -222,12 +222,7 @@ class Table extends BaseNoSqlDbTableResource
     }
 
     /**
-     * @param      $table
-     * @param null $fields_info
-     * @param null $requested_fields
-     * @param null $requested_types
-     *
-     * @return array
+     * {@inheritdoc}
      */
     protected function getIdsInfo($table, $fields_info = null, &$requested_fields = null, $requested_types = null)
     {
@@ -896,7 +891,6 @@ class Table extends BaseNoSqlDbTableResource
         $requireMore = Scalar::boolval(array_get($extras, 'require_more')) || !empty($related);
         $allowRelatedDelete = Scalar::boolval(array_get($extras, 'allow_related_delete'));
         $relatedInfo = $this->describeTableRelated($this->transactionTable);
-        $updates = array_get($extras, 'updates');
         $options = [];
 
         $out = [];
@@ -942,7 +936,7 @@ class Table extends BaseNoSqlDbTableResource
                 if (!empty($relatedInfo)) {
                     $this->updatePreRelations($record, $relatedInfo);
                 }
-                if (!empty($updates)) {
+                if (!empty($updates = array_get($extras, 'updates'))) {
                     $parsed = $this->parseRecord($updates, $this->tableFieldsInfo, $ssFilters, true);
                     $updates = $parsed;
                 } else {
@@ -953,7 +947,8 @@ class Table extends BaseNoSqlDbTableResource
                 }
 
                 // only update/patch by ids can use batching
-                if (!$continue && !$rollback && !$single && !empty($updates)) {
+                $upsert = $this->parent->upsertAllowed();
+                if (!$continue && !$rollback && !$single && !empty($updates) && !$upsert) {
                     return parent::addToTransaction(null, static::idToMongoId($id));
                 }
 
@@ -965,6 +960,7 @@ class Table extends BaseNoSqlDbTableResource
                 // simple overwrite existing record
                 $filter = [static::DEFAULT_ID_FIELD => static::idToMongoId($id)];
                 $criteria = $this->buildCriteriaArray($filter, null, $ssFilters);
+                $options['upsert'] = $upsert;
                 if ($requireMore || $rollback) {
                     if (!$rollback) {
                         $options['projection'] = static::buildProjection($fields);
@@ -1008,7 +1004,7 @@ class Table extends BaseNoSqlDbTableResource
                 if (!empty($relatedInfo)) {
                     $this->updatePreRelations($record, $relatedInfo);
                 }
-                if (!empty($updates)) {
+                if (!empty($updates = array_get($extras, 'updates'))) {
                     $parsed = $this->parseRecord($updates, $this->tableFieldsInfo, $ssFilters, true);
                     $updates = $parsed;
                 } else {
@@ -1290,7 +1286,8 @@ class Table extends BaseNoSqlDbTableResource
                 }
                 if (!$found) {
                     $errors = true;
-                    $out[$index] = new NotFoundException("Record with identifier '" . print_r($id, true) . "' not found.");
+                    $out[$index] = new NotFoundException("Record with identifier '" . print_r($id,
+                            true) . "' not found.");
                 }
             }
 
