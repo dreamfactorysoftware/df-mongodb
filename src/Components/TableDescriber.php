@@ -74,7 +74,7 @@ trait TableDescriber
                     ],
                     'type'               => [
                         'type'        => 'string',
-                        'description' => 'The DSP abstract data type for this field.',
+                        'description' => 'The DreamFactory abstract data type for this field.',
                     ],
                     'db_type'            => [
                         'type'        => 'string',

@@ -16,8 +16,7 @@ use DreamFactory\Core\MongoDb\Services\MongoDb;
 use DreamFactory\Core\Database\Resources\BaseNoSqlDbTableResource;
 use DreamFactory\Core\Utility\DataFormatter;
 use DreamFactory\Core\Utility\Session;
-use DreamFactory\Library\Utility\Enums\Verbs;
-use DreamFactory\Library\Utility\Scalar;
+use DreamFactory\Core\Enums\Verbs;
 use MongoDB\BSON\Binary;
 use MongoDB\BSON\ObjectID;
 use MongoDB\BSON\Regex;
@@ -888,8 +887,8 @@ class Table extends BaseNoSqlDbTableResource
         $ssFilters = array_get($extras, 'ss_filters');
         $fields = array_get($extras, ApiOptions::FIELDS);
         $related = array_get($extras, 'related');
-        $requireMore = Scalar::boolval(array_get($extras, 'require_more')) || !empty($related);
-        $allowRelatedDelete = Scalar::boolval(array_get($extras, 'allow_related_delete'));
+        $requireMore = array_get_bool($extras, 'require_more') || !empty($related);
+        $allowRelatedDelete = array_get_bool($extras, 'allow_related_delete');
         $relatedInfo = $this->describeTableRelated($this->transactionTable);
         $options = [];
 
@@ -1325,8 +1324,8 @@ class Table extends BaseNoSqlDbTableResource
         $limit = intval(array_get($extras, ApiOptions::LIMIT, 0));
         $offset = intval(array_get($extras, ApiOptions::OFFSET, 0));
         $sort = static::buildSortArray(array_get($extras, ApiOptions::ORDER));
-        $countOnly = Scalar::boolval(array_get($extras, ApiOptions::COUNT_ONLY));
-        $includeCount = Scalar::boolval(array_get($extras, ApiOptions::INCLUDE_COUNT, false));
+        $countOnly = array_get_bool($extras, ApiOptions::COUNT_ONLY);
+        $includeCount = array_get_bool($extras, ApiOptions::INCLUDE_COUNT);
         $maxAllowed = static::getMaxRecordsReturnedLimit();
         $needLimit = false;
         if (($limit < 1) || ($limit > $maxAllowed)) {

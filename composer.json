@@ -29,8 +29,8 @@
     "wiki":   "https://wiki.dreamfactory.com"
   },
   "require":     {
-    "dreamfactory/df-database": "~0.3.0",
-    "jenssegers/mongodb":       "3.0.*"
+    "dreamfactory/df-database": "~0.4.0",
+    "jenssegers/mongodb":       "3.2.*"
   },
   "autoload":    {
     "psr-4": {
@@ -39,7 +39,7 @@
   },
   "extra":       {
     "branch-alias": {
-      "dev-develop": "0.9.x-dev"
+      "dev-develop": "0.10.x-dev"
     }
   }
 }

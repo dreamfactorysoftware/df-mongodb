@@ -1,5 +1,5 @@
 <?php
-use DreamFactory\Library\Utility\Enums\Verbs;
+use DreamFactory\Core\Enums\Verbs;
 use DreamFactory\Core\Enums\ApiOptions;
 use DreamFactory\Core\Enums\DataFormats;
 use DreamFactory\Core\MongoDb\Services\MongoDb;
