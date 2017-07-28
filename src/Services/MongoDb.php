@@ -78,28 +78,24 @@ class MongoDb extends BaseDbService
     {
         parent::__construct($settings);
 
-        $config = (array)array_get($settings, 'config');
-        Session::replaceLookups($config, true);
-
-        $config['driver'] = 'mongodb';
-        if (!empty($dsn = strval(array_get($config, 'dsn')))) {
+        $this->config['driver'] = 'mongodb';
+        if (!empty($dsn = strval(array_get($this->config, 'dsn')))) {
             // add prefix if not there
             if (0 != substr_compare($dsn, static::DSN_PREFIX, 0, static::DSN_PREFIX_LENGTH, true)) {
                 $dsn = static::DSN_PREFIX . $dsn;
-                $config['dsn'] = $dsn;
+                $this->config['dsn'] = $dsn;
             }
         }
 
         // laravel database config requires options to be [], not null
-        $options = array_get($config, 'options', []);
-        if (empty($options)) {
-            $config['options'] = [];
+        if (empty($options = array_get($this->config, 'options', []))) {
+            $this->config['options'] = [];
         }
-        if (empty($db = array_get($config, 'database'))) {
-            if (!empty($db = array_get($config, 'options.db'))) {
-                $config['database'] = $db;
-            } elseif (!empty($db = array_get($config, 'options.database'))) {
-                $config['database'] = $db;
+        if (empty($db = array_get($this->config, 'database'))) {
+            if (!empty($db = array_get($this->config, 'options.db'))) {
+                $this->config['database'] = $db;
+            } elseif (!empty($db = array_get($this->config, 'options.database'))) {
+                $this->config['database'] = $db;
             } else {
                 //  Attempt to find db in connection string
                 $db = strstr(substr($dsn, static::DSN_PREFIX_LENGTH), '/');
@@ -107,7 +103,7 @@ class MongoDb extends BaseDbService
                     $db = substr($db, 0, $pos);
                 }
                 $db = trim($db, '/');
-                $config['database'] = $db;
+                $this->config['database'] = $db;
             }
         }
 
@@ -115,14 +111,17 @@ class MongoDb extends BaseDbService
             throw new InternalServerErrorException("No MongoDb database selected in configuration.");
         }
 
-        $driverOptions = (array)array_get($config, 'driver_options');
+        $driverOptions = (array)array_get($this->config, 'driver_options');
         if (null !== $context = array_get($driverOptions, 'context')) {
             //  Automatically creates a stream from context
-            $driverOptions['context'] = stream_context_create($context);
+            $this->config['driver_options']['context'] = stream_context_create($context);
         }
+    }
 
+    protected function initializeConnection()
+    {
         // add config to global for reuse, todo check existence and update?
-        config(['database.connections.service.' . $this->name => $config]);
+        config(['database.connections.service.' . $this->name => $this->config]);
         /** @type DatabaseManager $db */
         $db = app('db');
         $this->dbConn = $db->connection('service.' . $this->name);
