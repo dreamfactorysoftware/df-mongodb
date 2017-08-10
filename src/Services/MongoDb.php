@@ -7,7 +7,6 @@ use DreamFactory\Core\MongoDb\Database\Schema\Schema as DatabaseSchema;
 use DreamFactory\Core\MongoDb\Resources\Table;
 use DreamFactory\Core\Database\Resources\DbSchemaResource;
 use DreamFactory\Core\Database\Services\BaseDbService;
-use DreamFactory\Core\Utility\Session;
 use Illuminate\Database\DatabaseManager;
 use Jenssegers\Mongodb\Connection;
 
@@ -140,26 +139,5 @@ class MongoDb extends BaseDbService
         $db->disconnect('service.' . $this->name);
 
         parent::__destruct();
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getResources($only_handlers = false)
-    {
-        $resources = [
-            DbSchemaResource::RESOURCE_NAME => [
-                'name'       => DbSchemaResource::RESOURCE_NAME,
-                'class_name' => DbSchemaResource::class,
-                'label'      => 'Schema',
-            ],
-            Table::RESOURCE_NAME  => [
-                'name'       => Table::RESOURCE_NAME,
-                'class_name' => Table::class,
-                'label'      => 'Tables',
-            ]
-        ];
-
-        return ($only_handlers) ? $resources : array_values($resources);
     }
 }
