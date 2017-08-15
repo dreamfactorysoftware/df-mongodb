@@ -125,8 +125,6 @@ class MongoDb extends BaseDbService
         $db = app('db');
         $this->dbConn = $db->connection('service.' . $this->name);
         $this->schema = new DatabaseSchema($this->dbConn);
-        $this->schema->setCache($this);
-        $this->schema->setExtraStore($this);
     }
 
     /**
