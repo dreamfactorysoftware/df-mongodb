@@ -204,10 +204,6 @@ class Table extends BaseNoSqlDbTableResource
      */
     public function retrieveRecordsByFilter($table, $filter = null, $params = [], $extras = [])
     {
-        if (!$this->doesTableExist($table)) {
-            throw new NotFoundException("Table '$table' does not exist in the database.");
-        }
-
         $ssFilters = array_get($extras, 'ss_filters');
         $criteria = static::buildCriteriaArray($filter, $params, $ssFilters);
 
@@ -1301,7 +1297,7 @@ class Table extends BaseNoSqlDbTableResource
     protected function runQuery($table, $criteria, $extras)
     {
         $collection = $this->selectTable($table);
-        $schema = $this->getTableSchema($table);
+        $schema = $this->getTableSchema(null, $table);
         if (!$schema) {
             throw new NotFoundException("Table '$table' does not exist in the database.");
         }
