@@ -115,6 +115,14 @@ class MongoDb extends BaseDbService
             //  Automatically creates a stream from context
             $this->config['driver_options']['context'] = stream_context_create($context);
         }
+
+        if (empty($prefix = array_get($this->config, 'dsn'))) {
+            $host = array_get($this->config, 'host');
+            $port = array_get($this->config, 'port');
+            $username = array_get($this->config, 'username');
+            $prefix = $host . $port . $username . $db;
+        }
+        $this->setConfigBasedCachePrefix($prefix . ':');
     }
 
     protected function initializeConnection()
