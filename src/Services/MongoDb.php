@@ -7,7 +7,6 @@ use DreamFactory\Core\MongoDb\Database\Schema\Schema as DatabaseSchema;
 use DreamFactory\Core\MongoDb\Resources\Table;
 use DreamFactory\Core\Database\Resources\DbSchemaResource;
 use DreamFactory\Core\Database\Services\BaseDbService;
-use DreamFactory\Core\Utility\Session;
 use Illuminate\Database\DatabaseManager;
 use Jenssegers\Mongodb\Connection;
 
@@ -116,6 +115,14 @@ class MongoDb extends BaseDbService
             //  Automatically creates a stream from context
             $this->config['driver_options']['context'] = stream_context_create($context);
         }
+
+        if (empty($prefix = array_get($this->config, 'dsn'))) {
+            $host = array_get($this->config, 'host');
+            $port = array_get($this->config, 'port');
+            $username = array_get($this->config, 'username');
+            $prefix = $host . $port . $username . $db;
+        }
+        $this->setConfigBasedCachePrefix($prefix . ':');
     }
 
     protected function initializeConnection()
@@ -126,8 +133,6 @@ class MongoDb extends BaseDbService
         $db = app('db');
         $this->dbConn = $db->connection('service.' . $this->name);
         $this->schema = new DatabaseSchema($this->dbConn);
-        $this->schema->setCache($this);
-        $this->schema->setExtraStore($this);
     }
 
     /**
@@ -140,26 +145,5 @@ class MongoDb extends BaseDbService
         $db->disconnect('service.' . $this->name);
 
         parent::__destruct();
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getResources($only_handlers = false)
-    {
-        $resources = [
-            DbSchemaResource::RESOURCE_NAME => [
-                'name'       => DbSchemaResource::RESOURCE_NAME,
-                'class_name' => DbSchemaResource::class,
-                'label'      => 'Schema',
-            ],
-            Table::RESOURCE_NAME  => [
-                'name'       => Table::RESOURCE_NAME,
-                'class_name' => Table::class,
-                'label'      => 'Tables',
-            ]
-        ];
-
-        return ($only_handlers) ? $resources : array_values($resources);
     }
 }

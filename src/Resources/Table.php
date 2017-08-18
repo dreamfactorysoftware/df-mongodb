@@ -6,7 +6,6 @@ use DreamFactory\Core\Database\Schema\RelationSchema;
 use DreamFactory\Core\Enums\ApiOptions;
 use DreamFactory\Core\Enums\DbComparisonOperators;
 use DreamFactory\Core\Enums\DbLogicalOperators;
-use DreamFactory\Core\Enums\DbResourceTypes;
 use DreamFactory\Core\Exceptions\BadRequestException;
 use DreamFactory\Core\Exceptions\BatchException;
 use DreamFactory\Core\Exceptions\InternalServerErrorException;
@@ -205,11 +204,6 @@ class Table extends BaseNoSqlDbTableResource
      */
     public function retrieveRecordsByFilter($table, $filter = null, $params = [], $extras = [])
     {
-        $schema = $this->parent->getSchema()->getResource(DbResourceTypes::TYPE_TABLE, $table);
-        if (!$schema) {
-            throw new NotFoundException("Table '$table' does not exist in the database.");
-        }
-
         $ssFilters = array_get($extras, 'ss_filters');
         $criteria = static::buildCriteriaArray($filter, $params, $ssFilters);
 
@@ -1303,7 +1297,7 @@ class Table extends BaseNoSqlDbTableResource
     protected function runQuery($table, $criteria, $extras)
     {
         $collection = $this->selectTable($table);
-        $schema = $this->parent->getSchema()->getResource(DbResourceTypes::TYPE_TABLE, $table);
+        $schema = $this->getTableSchema(null, $table);
         if (!$schema) {
             throw new NotFoundException("Table '$table' does not exist in the database.");
         }
