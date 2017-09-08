@@ -2,7 +2,7 @@
 namespace DreamFactory\Core\MongoDb\Models;
 
 use DreamFactory\Core\Components\RequireExtensions;
-use DreamFactory\Core\Database\Components\SupportsUpsert;
+use DreamFactory\Core\Database\Components\SupportsUpsertAndCache;
 use DreamFactory\Core\Exceptions\BadRequestException;
 use DreamFactory\Core\Models\BaseServiceConfigModel;
 use DreamFactory\Core\MongoDb\Services\MongoDb;
@@ -20,11 +20,10 @@ use DreamFactory\Core\MongoDb\Services\MongoDb;
  * @property array   $options
  * @property array   $driver_options
  *
- * @method static MongoDbConfig whereServiceId($value)
  */
 class MongoDbConfig extends BaseServiceConfigModel
 {
-    use RequireExtensions, SupportsUpsert;
+    use RequireExtensions, SupportsUpsertAndCache;
 
     protected $table = 'mongodb_config';
 
