@@ -29,7 +29,7 @@
     "wiki":   "https://wiki.dreamfactory.com"
   },
   "require":     {
-    "dreamfactory/df-database": "~0.6.0",
+    "dreamfactory/df-database": "~0.7.0",
     "jenssegers/mongodb":       "3.2.*"
   },
   "autoload":    {
@@ -39,7 +39,7 @@
   },
   "extra":       {
     "branch-alias": {
-      "dev-develop": "0.12.x-dev"
+      "dev-develop": "0.13.x-dev"
     }
   }
 }
