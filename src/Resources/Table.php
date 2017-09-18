@@ -1352,7 +1352,8 @@ class Table extends BaseNoSqlDbTableResource
 
         if (!empty($data) && (!empty($related) || $schema->fetchRequiresRelations)) {
             if (!empty($availableRelations)) {
-                $this->retrieveRelatedRecords($schema, $availableRelations, $related, $data);
+                $refresh = array_get_bool($extras, ApiOptions::REFRESH);
+                $this->retrieveRelatedRecords($schema, $availableRelations, $related, $data, $refresh);
             }
         }
 
