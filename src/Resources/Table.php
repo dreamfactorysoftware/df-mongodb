@@ -1297,7 +1297,7 @@ class Table extends BaseNoSqlDbTableResource
     protected function runQuery($table, $criteria, $extras)
     {
         $collection = $this->selectTable($table);
-        $schema = $this->getTableSchema(null, $table);
+        $schema = $this->parent->getTableSchema($table);
         if (!$schema) {
             throw new NotFoundException("Table '$table' does not exist in the database.");
         }
