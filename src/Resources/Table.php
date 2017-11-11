@@ -1320,7 +1320,7 @@ class Table extends BaseNoSqlDbTableResource
         $sort = static::buildSortArray(array_get($extras, ApiOptions::ORDER));
         $countOnly = array_get_bool($extras, ApiOptions::COUNT_ONLY);
         $includeCount = array_get_bool($extras, ApiOptions::INCLUDE_COUNT);
-        $maxAllowed = static::getMaxRecordsReturnedLimit();
+        $maxAllowed = $this->getMaxRecordsReturnedLimit();
         $needLimit = false;
         if (($limit < 1) || ($limit > $maxAllowed)) {
             // impose a limit to protect server

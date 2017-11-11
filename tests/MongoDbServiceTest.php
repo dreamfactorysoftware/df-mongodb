@@ -7,7 +7,7 @@ use DreamFactory\Core\MongoDb\Resources\Schema;
 use DreamFactory\Core\MongoDb\Resources\Table;
 use DreamFactory\Core\Testing\TestServiceRequest;
 
-class MongoDbTest extends \DreamFactory\Core\Testing\DbServiceTestCase
+class MongoDbTest extends \DreamFactory\Core\Database\Testing\DbServiceTestCase
 {
     /**
      * @const string
