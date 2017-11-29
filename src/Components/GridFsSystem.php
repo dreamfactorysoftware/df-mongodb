@@ -109,6 +109,13 @@ class GridFsSystem extends RemoteFileSystem
         return $this->checkConnection();
     }
 
+    /**
+     * @param string $container
+     * @param string $prefix
+     * @param string $delimiter - if full_tree is true, delimeter will be empty.
+     *
+     * @return array
+     */
     public function listBlobs($container, $prefix = '', $delimiter = '')
     {
         $allFiles = $this->gridFind();
@@ -126,99 +133,92 @@ class GridFsSystem extends RemoteFileSystem
         }
 
         /** If we have a delimiter (directory), there is no method in GridFS library to get only records under
-         * the delimiter as in AWS s3, so we need to manually filter out. */
-        $filtered = [];
+         * the delimiter as in AWS s3, so we need to manually filter out. First reduce down dirs to passed $prefix */
+        $reduced = [];
         foreach ($return as &$filterBlob) {
-            if (!is_null($prefix) && $delimiter == '/') {
-                if (0 == substr_compare($prefix, $filterBlob['path'], 0, strlen($prefix), true)) {
-                    /** Don't include dir file representing the prefix, only subs... But only to a certain level. */
-                    if ($filterBlob['path'] !== $prefix) {
-                        /** @var Levels deep in path $pathCnt */
-                        $pathCnt = count(explode('/', $filterBlob['path']));
-                        /** @var Levels deep in prefix $prefixCnt */
-                        $prefixCnt = count(explode('/', $prefix));
-                        /** Only allow one level deeper than prefix and nothing past a containing directory. */
-                        if ($prefixCnt + 1 == $pathCnt && ('/' == substr($filterBlob['path'], -1))) {
-                            $filtered[] = $filterBlob;
-                        }
-                    }
-                } else {
-                    if ($dirPos = strpos($filterBlob['path'], '/') !== false) {
-                        if ($dirPos + 1 == strlen($filterBlob['path'])) {
-                            /** same level, add to return */
-                            $filtered[] = $filterBlob;
-                        }
-                    }
-                }
+            if (strpos($filterBlob['path'], $prefix) !== false) {
+                $reduced[] = $filterBlob;
             }
         }
-        if (!empty($filtered)) {
-            $return = $filtered;
+
+        $reduced = (empty($reduced)) ? $return : $reduced;
+
+        return $this->filterPaths($prefix, $delimiter, $reduced);
+    }
+
+    /**
+     * Takes reduced records and filters out subs if delimeter is present indicating full_path = false
+     *
+     * @param $prefix       string path to start from
+     * @param $delimiter    string directory delimeter
+     * @param $reducedBlobs array reduced by starting prefix records
+     *
+     * @return array filtered records
+     */
+    protected function filterPaths($prefix, $delimiter, $reducedBlobs)
+    {
+        $return = [];
+        foreach ($reducedBlobs as $reduction) {
+            //Skip over self-same directory listings
+            if ($reduction['name'] == $prefix) {
+                continue;
+            } else if ($delimiter == '/') {
+                // How many levels in path
+                $pathCnt = count(explode('/', $reduction['path']));
+                // How many levels in prefix
+                $prefixCnt = count(explode('/', $prefix));
+                // Directories only listing - To allow one level deeper than prefix.
+                if ($prefixCnt + 1 == $pathCnt && ('/' == substr($reduction['path'], -1))) {
+                    $return[] = $reduction;
+                } elseif ($prefixCnt == $pathCnt) {
+                    // Grabs only the files within the path
+                    $return[] = $reduction;
+                }
+            } else {
+                $return[] = $reduction;
+            }
         }
 
         return $return;
     }
 
-    protected
-    function selectDb(
-        $db
-    ){
+    protected function selectDb($db)
+    {
         $this->blobConn->selectDatabase($db);
     }
 
-    public
-    function listContainers(
-        $include_properties = false
-    ){
+    public function listContainers($include_properties = false)
+    {
         $stop = true;
     }
 
-    public
-    function getContainer(
-        $container,
-        $include_files = true,
-        $include_folders = true,
-        $full_tree = false
-    ){
+    public function getContainer($container, $include_files = true, $include_folders = true, $full_tree = false)
+    {
         // TODO: Implement getContainer() method.
     }
 
-    public
-    function getContainerProperties(
-        $container
-    ){
+    public function getContainerProperties($container)
+    {
         // TODO: Implement getContainerProperties() method.
     }
 
-    public
-    function createContainer(
-        $container,
-        $check_exist = false
-    ){
+    public function createContainer($container, $check_exist = false)
+    {
         // TODO: Implement createContainer() method.
     }
 
-    public
-    function updateContainerProperties(
-        $container,
-        $properties = []
-    ){
+    public function updateContainerProperties($container, $properties = [])
+    {
         // TODO: Implement updateContainerProperties() method.
     }
 
-    public
-    function deleteContainer(
-        $container,
-        $force = false
-    ){
+    public function deleteContainer($container, $force = false)
+    {
         // TODO: Implement deleteContainer() method.
     }
 
-    public
-    function blobExists(
-        $container,
-        $name
-    ){
+    public function blobExists($container, $name)
+    {
         try {
             $this->checkConnection();
             $params = ['filename' => $name];
@@ -233,13 +233,8 @@ class GridFsSystem extends RemoteFileSystem
         return false;
     }
 
-    public
-    function putBlobData(
-        $container,
-        $name,
-        $data = null,
-        $properties = []
-    ){
+    public function putBlobData($container, $name, $data = null, $properties = [])
+    {
         try {
             $contentType = (empty($properties) && strpos($name, '/')) ? 'application/x-directory' : $properties;
 
@@ -252,58 +247,46 @@ class GridFsSystem extends RemoteFileSystem
         }
     }
 
-    public
-    function putBlobFromFile(
-        $container,
-        $name,
-        $localFileName = null,
-        $properties = []
-    ){
+    /**
+     * @inheritdoc
+     */
+    public function fileExists($container, $path)
+    {
+            if ($this->blobExists($container, $path)) {
+                return true;
+            }
 
+        return false;
     }
 
-    public
-    function copyBlob(
-        $container,
-        $name,
-        $src_container,
-        $src_name,
-        $properties = []
-    ){
+
+    public function putBlobFromFile($container, $name, $localFileName = null, $properties = [])
+    {
+        $stop = 1;
+    }
+
+    public function copyBlob($container, $name, $src_container, $src_name, $properties = [])
+    {
         // TODO: Implement copyBlob() method.
     }
 
-    public
-    function getBlobAsFile(
-        $container,
-        $name,
-        $localFileName = null
-    ){
+    public function getBlobAsFile($container, $name, $localFileName = null)
+    {
         $stop = 1;// TODO: Implement getBlobAsFile() method.
     }
 
-    public
-    function getBlobData(
-        $container,
-        $name
-    ){
+    public function getBlobData($container, $name)
+    {
         $stop = 1;// TODO: Implement getBlobAsFile() method.
     }
 
-    public
-    function getBlobProperties(
-        $container,
-        $name
-    ){
+    public function getBlobProperties($container, $name)
+    {
         $stop = 1;// TODO: Implement getBlobProperties() method.
     }
 
-    public
-    function streamBlob(
-        $container,
-        $name,
-        $params = []
-    ){
+    public function streamBlob($container, $name, $params = [])
+    {
         try {
             $fileObj = $this->gridFS->findOne(['filename' => $name]);
 
@@ -328,12 +311,15 @@ class GridFsSystem extends RemoteFileSystem
         }
     }
 
-    public
-    function deleteBlob(
-        $container,
-        $name,
-        $noCheck = false
-    ){
-        $stop = 1;
+    public function deleteBlob($container, $name, $noCheck = false)
+    {
+        try {
+            $cursor = $this->gridFS->findOne( ['filename' => $name]);
+            $this->gridFS->delete($cursor->_id);
+
+        } catch (\Exception $ex){
+            throw new DfException('Failed to delete GridFS file "' . $name . '": ' . $ex->getMessage());
+
+        }
     }
 }
