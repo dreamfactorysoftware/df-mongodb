@@ -140,19 +140,11 @@ class MongoDb extends BaseDbService
      */
     public function __destruct()
     {
-        try {
+        if(env('APP_ENV') !== 'testing') {
             /** @type DatabaseManager $db */
             $db = app('db');
             $db->disconnect('service.' . $this->name);
-
-            parent::__destruct();
-        } catch (\ReflectionException $e) {
-            if (env('APP_ENV') === 'testing') {
-                // When unit test is run. This exception is thrown.
-                // Catching it and staying quite helps with unit test
-            } else {
-                throw $e;
-            }
         }
+        parent::__destruct();
     }
 }
