@@ -12,6 +12,7 @@ use DreamFactory\Core\Exceptions\DfException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpFoundation\Response;
 use MongoDB\Client as MongoDBClient;
+use Illuminate\Http\Request;
 use MongoDB\GridFS;
 
 class GridFsSystem extends RemoteFileSystem
@@ -33,8 +34,11 @@ class GridFsSystem extends RemoteFileSystem
 
     protected $testdb = 'local'; //TODO: need to be able to pass in the db.
 
+    protected $request = null;
+
     public function __construct($config, $name)
     {
+        $this->request = Request::capture();
         $config['driver'] = 'mongodb';
 
         if (!empty($dsn = strval(array_get($config, 'dsn')))) {
@@ -79,11 +83,21 @@ class GridFsSystem extends RemoteFileSystem
             $host = array_get($config, 'host');
             $port = array_get($config, 'port');
             $username = array_get($config, 'username');
-            $prefix = $host . $port . $username . $db;
+            $password = array_get($config, 'password');
+            $database = array_get($config, 'database');
+            $connectionStr = sprintf("mongodb://%s:%s/%s", $host,
+                $port, $database);
+
+            $this->blobConn = new MongoDBClient($connectionStr, [
+                'username'   => $username,
+                'password'   => $password,
+                'authSource' => 'admin',
+            ]);
+        } else {
+            $this->blobConn = new MongoDBClient($dsn);
         }
 
-        //TODO:Right now hardcoded to localhost, need to pass in dynamic connection params.
-        $this->blobConn = new MongoDBClient("mongodb://localhost:27017");
+
         $this->gridFS = $this->blobConn->local->selectGridFSBucket();
     }
 
@@ -102,6 +116,13 @@ class GridFsSystem extends RemoteFileSystem
     protected function gridFind()
     {
         return $this->gridFS->find();
+    }
+
+    protected function gridFindOne($name)
+    {
+        $params = ['filename' => $name];
+
+        return $this->gridFS->findOne($params);
     }
 
     public function containerExists($container)
@@ -221,8 +242,7 @@ class GridFsSystem extends RemoteFileSystem
     {
         try {
             $this->checkConnection();
-            $params = ['filename' => $name];
-            $cursor = $this->gridFS->findOne($params);
+            $cursor = $this->gridFindOne($name);
             if (!is_null($cursor)) {
                 return true;
             }
@@ -236,12 +256,20 @@ class GridFsSystem extends RemoteFileSystem
     public function putBlobData($container, $name, $data = null, $properties = [])
     {
         try {
+            $existing = null;
             $contentType = (empty($properties) && strpos($name, '/')) ? 'application/x-directory' : $properties;
-
+            // If we are changing blob data, need to do it atomically here.
+            if ($this->request->getMethod() == 'PUT') {
+                // Check for existing
+                $existing = $this->gridFindOne($name);
+            }
             /** @var Need to open a stream to GridFS (this creates the empty file meta) $gfsStream */
             $gfsStream = $this->gridFS->openUploadStream($name, ['contentType' => $contentType]);
             /** Writes to the stream */
-            fwrite($gfsStream, $data);
+            if (fwrite($gfsStream, $data) && !is_null($existing)) {
+                // if put operation, this will delete the existing file as replaced.
+                $this->deleteByObjectId($existing->_id);
+            }
         } catch (\Exception $ex) {
             throw new DfException('Failed to create GridFS file "' . $name . '": ' . $ex->getMessage());
         }
@@ -252,13 +280,12 @@ class GridFsSystem extends RemoteFileSystem
      */
     public function fileExists($container, $path)
     {
-            if ($this->blobExists($container, $path)) {
-                return true;
-            }
+        if ($this->blobExists($container, $path)) {
+            return true;
+        }
 
         return false;
     }
-
 
     public function putBlobFromFile($container, $name, $localFileName = null, $properties = [])
     {
@@ -288,15 +315,16 @@ class GridFsSystem extends RemoteFileSystem
     public function streamBlob($container, $name, $params = [])
     {
         try {
-            $fileObj = $this->gridFS->findOne(['filename' => $name]);
 
+            $fileObj = $this->gridFindOne($name);
+            $range = (isset($params['range'])) ? $params['range'] : null;
+            $start = $end = -1;
             $stream = $this->gridFS->openDownloadStream($fileObj->_id);
-            //$contents = stream_get_contents($stream);
             $date = $fileObj->uploadDate->toDateTime();
+            $size = $fullsize = intval($fileObj->length);
 
             header('Last-Modified: ' . $date->format(\DateTime::ATOM));
             header('Content-Type: ' . $fileObj->contentType);
-            header('Content-Length:' . intval($fileObj->length));
 
             $disposition =
                 (isset($params['disposition']) && !empty($params['disposition'])) ? $params['disposition']
@@ -304,8 +332,30 @@ class GridFsSystem extends RemoteFileSystem
 
             header('Content-Disposition: ' . $disposition . '; filename="' . $name . '";');
 
-            /** TODO: can add offset and maxlength to stream chunks. */
-            echo stream_get_contents($stream);
+            // All this for range header being passed.
+            if ($range != null) {
+                $eqPos = strpos($range, "=");
+                $toPos = strpos($range, "-");
+                $unit = substr($range, 0, $eqPos);
+                $start = intval(substr($range, $eqPos + 1, $toPos));
+                $end = intval(substr($range, $toPos + 1));
+                $success = fseek($stream, $start);
+                if ($success == 0) {
+                    $size = $end - $start;
+                    // Don't let the passed size exceed the actual.
+                    if ($fullsize <= $size) {
+                        $size = $fullsize;
+                    }
+                    $response_code = 206;
+                    header('Accept-Ranges: ' . $unit);
+                    header('Content-Range: ' . $unit . " " . $start . "-" . ($fullsize - 1) . "/" . $fullsize, true,
+                        $response_code);
+                }
+            }
+
+            header('Content-Length:' . $size);
+
+            echo stream_get_contents($stream, $end, $start);
         } catch (\Exception $ex) {
             throw new DfException('Failed to retrieve GridFS file "' . $name . '": ' . $ex->getMessage());
         }
@@ -314,12 +364,22 @@ class GridFsSystem extends RemoteFileSystem
     public function deleteBlob($container, $name, $noCheck = false)
     {
         try {
-            $cursor = $this->gridFS->findOne( ['filename' => $name]);
-            $this->gridFS->delete($cursor->_id);
-
-        } catch (\Exception $ex){
+            $cursor = $this->gridFindOne($name);
+            $this->deleteByObjectId($cursor->_id);
+        } catch (\Exception $ex) {
             throw new DfException('Failed to delete GridFS file "' . $name . '": ' . $ex->getMessage());
-
         }
+    }
+
+    /**
+     * Deletes a gridfs file and associated data chunks by object id
+     *
+     * @param $objId object GridFS ID Object
+     *
+     * @return boolean
+     */
+    protected function deleteByObjectId($objId)
+    {
+        return $this->gridFS->delete($objId);
     }
 }
