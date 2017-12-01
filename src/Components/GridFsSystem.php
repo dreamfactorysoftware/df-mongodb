@@ -26,14 +26,20 @@ class GridFsSystem extends RemoteFileSystem
      * Connection string prefix length
      */
     const DSN_PREFIX_LENGTH = 10;
+
     /**
-     * @var Connection
+     * MongoDb connection
      */
     protected $blobConn = null;
+
+    /**
+     * gridFS bucket reference
+     */
     protected $gridFS = null;
 
-    protected $testdb = 'local'; //TODO: need to be able to pass in the db.
-
+    /**
+     * reference to the request object
+     */
     protected $request = null;
 
     public function __construct($config, $name)
@@ -84,21 +90,29 @@ class GridFsSystem extends RemoteFileSystem
             $port = array_get($config, 'port');
             $username = array_get($config, 'username');
             $password = array_get($config, 'password');
-            $database = array_get($config, 'database');
             $connectionStr = sprintf("mongodb://%s:%s/%s", $host,
-                $port, $database);
+                $port, $db);
 
-            $this->blobConn = new MongoDBClient($connectionStr, [
-                'username'   => $username,
-                'password'   => $password,
-                'authSource' => 'admin',
-            ]);
+            $connectionOptions = [
+                'username' => $username,
+                'password' => $password,
+            ];
+
+            if (!empty($options)) {
+                $connectionOptions += $options;
+            }
+            $this->blobConn = new MongoDBClient($connectionStr, $connectionOptions);
         } else {
             $this->blobConn = new MongoDBClient($dsn);
         }
 
+        $bucketName = array_get($config, 'bucket_name');
 
-        $this->gridFS = $this->blobConn->local->selectGridFSBucket();
+        if (!is_null($bucketName)) {
+            $this->gridFS = $this->blobConn->$db->selectGridFSBucket(['bucketName' => $bucketName]);
+        } else {
+            $this->gridFS = $this->blobConn->$db->selectGridFSBucket();
+        }
     }
 
     /**

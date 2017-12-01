@@ -3,6 +3,7 @@ namespace DreamFactory\Core\MongoDb;
 
 use DreamFactory\Core\Enums\ServiceTypeGroups;
 use DreamFactory\Core\MongoDb\Models\MongoDbConfig;
+use DreamFactory\Core\MongoDb\Models\GridFsConfig;
 use DreamFactory\Core\MongoDb\Services\GridFsService;
 use DreamFactory\Core\MongoDb\Services\MongoDb;
 use DreamFactory\Core\Services\ServiceManager;
@@ -35,7 +36,7 @@ class ServiceProvider extends MongodbServiceProvider
                     'label'           => 'GridFS',
                     'description'     => 'GridFS File Storage services.',
                     'group'           => ServiceTypeGroups::FILE,
-                    'config_handler'  => MongoDbConfig::class,
+                    'config_handler'  => GridFsConfig::class,
                     'factory'         => function ($config) {
                         return new GridFsService($config);
                     },
