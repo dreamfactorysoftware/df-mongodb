@@ -351,8 +351,8 @@ class GridFsSystem extends RemoteFileSystem
     public function getBlobProperties($container, $name)
     {
         $obj = $this->gridFindOne($name);
-        return $this->getBlobMeta($obj);
 
+        return $this->getBlobMeta($obj);
     }
 
     public function streamBlob($container, $name, $params = [])
