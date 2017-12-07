@@ -2,18 +2,11 @@
 
 namespace DreamFactory\Core\MongoDb\Components;
 
-use DreamFactory\Core\Contracts\FileSystemInterface;
-use DreamFactory\Core\Exceptions\NotImplementedException;
 use DreamFactory\Core\Exceptions\InternalServerErrorException;
 use DreamFactory\Core\File\Components\RemoteFileSystem;
-use DreamFactory\Core\MongoDb\Database\Schema\Schema;
-use Illuminate\Database\DatabaseManager;
 use DreamFactory\Core\Exceptions\DfException;
-use Symfony\Component\HttpFoundation\StreamedResponse;
-use Symfony\Component\HttpFoundation\Response;
 use MongoDB\Client as MongoDBClient;
 use Illuminate\Http\Request;
-use MongoDB\GridFS;
 
 class GridFsSystem extends RemoteFileSystem
 {
@@ -127,24 +120,46 @@ class GridFsSystem extends RemoteFileSystem
         return true;
     }
 
+    /**
+     * @return \MongoDB\Driver\Cursor
+     */
     protected function gridFind()
     {
         return $this->gridFS->find();
     }
 
+    /**
+     * finds a file based on filename from gridfs
+     *
+     * @param $name string name of the file to find.
+     *
+     * @return object file collection
+     */
     protected function gridFindOne($name)
     {
-        $params = ['filename' => $name];
+        try {
+            $params = ['filename' => $name];
+            $obj = $this->gridFS->findOne($params);
+        } catch (\Exception $ex) {
+            throw new NotFoundException('Could not find file "' . $name . '": ' . $ex->getMessage());
+        }
 
-        return $this->gridFS->findOne($params);
+        return $obj;
     }
 
+    /**
+     * @param string $container
+     *
+     * @return bool
+     */
     public function containerExists($container)
     {
         return $this->checkConnection();
     }
 
     /**
+     * main function to list blobs within a folder, etc.
+     *
      * @param string $container
      * @param string $prefix
      * @param string $delimiter - if full_tree is true, delimeter will be empty.
@@ -156,15 +171,7 @@ class GridFsSystem extends RemoteFileSystem
         $allFiles = $this->gridFind();
         $return = [];
         foreach ($allFiles as $fileObj) {
-            $date = $fileObj->uploadDate->toDateTime();
-            $return[] = [
-                'oid'            => (string)$fileObj->_id,
-                'name'           => $fileObj->filename,
-                'content_type'   => $fileObj->contentType,
-                'content_length' => $fileObj->length,
-                'last_modified'  => $date->format(\DateTime::ATOM),
-                'path'           => $fileObj->filename,
-            ];
+            $return[] = $this->getBlobMeta($fileObj);
         }
 
         /** If we have a delimiter (directory), there is no method in GridFS library to get only records under
@@ -179,6 +186,26 @@ class GridFsSystem extends RemoteFileSystem
         $reduced = (empty($reduced)) ? $return : $reduced;
 
         return $this->filterPaths($prefix, $delimiter, $reduced);
+    }
+
+    /**
+     * @param $obj object
+     *
+     * @return array blob metadata
+     */
+    protected function getBlobMeta($obj)
+    {
+        $date = $obj->uploadDate->toDateTime();
+        $return = [
+            'oid'            => (string)$obj->_id,
+            'name'           => $obj->filename,
+            'content_type'   => $obj->contentType,
+            'content_length' => $obj->length,
+            'last_modified'  => $date->format(\DateTime::ATOM),
+            'path'           => $obj->filename,
+        ];
+
+        return $return;
     }
 
     /**
@@ -277,7 +304,7 @@ class GridFsSystem extends RemoteFileSystem
                 // Check for existing
                 $existing = $this->gridFindOne($name);
             }
-            /** @var Need to open a stream to GridFS (this creates the empty file meta) $gfsStream */
+            /** Need to open a stream to GridFS (this creates the empty file meta) $gfsStream */
             $gfsStream = $this->gridFS->openUploadStream($name, ['contentType' => $contentType]);
             /** Writes to the stream */
             if (fwrite($gfsStream, $data) && !is_null($existing)) {
@@ -323,7 +350,9 @@ class GridFsSystem extends RemoteFileSystem
 
     public function getBlobProperties($container, $name)
     {
-        $stop = 1;// TODO: Implement getBlobProperties() method.
+        $obj = $this->gridFindOne($name);
+        return $this->getBlobMeta($obj);
+
     }
 
     public function streamBlob($container, $name, $params = [])
@@ -375,6 +404,13 @@ class GridFsSystem extends RemoteFileSystem
         }
     }
 
+    /**
+     * @param string $container
+     * @param string $name
+     * @param bool   $noCheck
+     *
+     * @throws \DreamFactory\Core\Exceptions\DfException
+     */
     public function deleteBlob($container, $name, $noCheck = false)
     {
         try {

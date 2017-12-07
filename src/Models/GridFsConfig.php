@@ -2,20 +2,10 @@
 
 namespace DreamFactory\Core\MongoDb\Models;
 
-use DreamFactory\Core\MongoDb\Models\MongoDbConfig;
-
 /**
- * MongoDbConfig
+ * GridFSConfig
  *
- * @property integer $service_id
- * @property string  $dsn
- * @property string  $host
- * @property integer $port
- * @property string  $database
- * @property string  $username
- * @property string  $password
- * @property array   $options
- * @property array   $driver_options
+ * @inheritdoc
  *
  */
 class GridFsConfig extends MongoDbConfig
@@ -64,16 +54,22 @@ class GridFsConfig extends MongoDbConfig
     public static function getConfigSchema()
     {
         $schema = (array)parent::getConfigSchema();
+        // Allow upsert not relevant to gridfs
         unset($schema['allow_upsert']);
 
+        // find a better order for bucket_name
         $reordered = [];
-        foreach($schema as $val){
+        foreach ($schema as $val) {
             $reordered[array_search($val['name'], static::$sort)] = $val;
         }
         ksort($reordered);
+
         return $reordered;
     }
 
+    /**
+     * @inheritdoc
+     */
     public static function getExtraConfigSchema()
     {
         $return = parent::getExtraConfigSchema();
