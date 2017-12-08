@@ -80,6 +80,7 @@ class GridFsSystem extends RemoteFileSystem
         }
 
         if (empty($prefix = array_get($config, 'dsn'))) {
+            $connectionOptions = [];
             $host = array_get($config, 'host');
             $port = array_get($config, 'port');
             $username = array_get($config, 'username');
@@ -87,10 +88,13 @@ class GridFsSystem extends RemoteFileSystem
             $connectionStr = sprintf("mongodb://%s:%s/%s", $host,
                 $port, $db);
 
-            $connectionOptions = [
-                'username' => $username,
-                'password' => $password,
-            ];
+            if(!empty($username) && !empty($password)){
+                $connectionOptions = [
+                    'username' => $username,
+                    'password' => $password,
+                ];
+
+            }
 
             if (!empty($options)) {
                 $connectionOptions += $options;
