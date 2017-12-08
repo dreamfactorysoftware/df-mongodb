@@ -30,8 +30,7 @@
   },
   "require":     {
     "dreamfactory/df-database": "~0.8.0",
-    "jenssegers/mongodb":       "~3.3.0",
-    "thephpleague/flysystem-gridfs": "~1.0.0"
+    "jenssegers/mongodb":       "~3.3.0"
   },
   "autoload":    {
     "psr-4": {

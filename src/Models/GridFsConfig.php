@@ -21,9 +21,6 @@ class GridFsConfig extends MongoDbConfig
         'dsn',
         'options',
         'driver_options',
-        'max_records',
-        'cache_enabled',
-        'cache_ttl',
     ];
 
     public static function getConfig($id, $local_config = null, $protect = true)
@@ -60,7 +57,10 @@ class GridFsConfig extends MongoDbConfig
         // find a better order for bucket_name
         $reordered = [];
         foreach ($schema as $val) {
-            $reordered[array_search($val['name'], static::$sort)] = $val;
+            $pos = array_search($val['name'], static::$sort);
+            if ($pos !== false) {
+                $reordered[$pos] = $val;
+            }
         }
         ksort($reordered);
 

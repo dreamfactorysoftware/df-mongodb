@@ -3,6 +3,7 @@
 namespace DreamFactory\Core\MongoDb\Components;
 
 use DreamFactory\Core\Exceptions\InternalServerErrorException;
+use DreamFactory\Core\Exceptions\NotImplementedException;
 use DreamFactory\Core\File\Components\RemoteFileSystem;
 use DreamFactory\Core\Exceptions\DfException;
 use MongoDB\Client as MongoDBClient;
@@ -79,6 +80,7 @@ class GridFsSystem extends RemoteFileSystem
         }
 
         if (empty($prefix = array_get($config, 'dsn'))) {
+            $connectionOptions = [];
             $host = array_get($config, 'host');
             $port = array_get($config, 'port');
             $username = array_get($config, 'username');
@@ -86,10 +88,13 @@ class GridFsSystem extends RemoteFileSystem
             $connectionStr = sprintf("mongodb://%s:%s/%s", $host,
                 $port, $db);
 
-            $connectionOptions = [
-                'username' => $username,
-                'password' => $password,
-            ];
+            if(!empty($username) && !empty($password)){
+                $connectionOptions = [
+                    'username' => $username,
+                    'password' => $password,
+                ];
+
+            }
 
             if (!empty($options)) {
                 $connectionOptions += $options;
@@ -101,7 +106,7 @@ class GridFsSystem extends RemoteFileSystem
 
         $bucketName = array_get($config, 'bucket_name');
 
-        if (!is_null($bucketName)) {
+        if (!empty($bucketName)) {
             $this->gridFS = $this->blobConn->$db->selectGridFSBucket(['bucketName' => $bucketName]);
         } else {
             $this->gridFS = $this->blobConn->$db->selectGridFSBucket();
@@ -244,41 +249,20 @@ class GridFsSystem extends RemoteFileSystem
         return $return;
     }
 
+    /**
+     * @param $db
+     */
     protected function selectDb($db)
     {
         $this->blobConn->selectDatabase($db);
     }
 
-    public function listContainers($include_properties = false)
-    {
-        $stop = true;
-    }
-
-    public function getContainer($container, $include_files = true, $include_folders = true, $full_tree = false)
-    {
-        // TODO: Implement getContainer() method.
-    }
-
-    public function getContainerProperties($container)
-    {
-        // TODO: Implement getContainerProperties() method.
-    }
-
-    public function createContainer($container, $check_exist = false)
-    {
-        // TODO: Implement createContainer() method.
-    }
-
-    public function updateContainerProperties($container, $properties = [])
-    {
-        // TODO: Implement updateContainerProperties() method.
-    }
-
-    public function deleteContainer($container, $force = false)
-    {
-        // TODO: Implement deleteContainer() method.
-    }
-
+    /**
+     * @param string $container
+     * @param string $name
+     *
+     * @return bool
+     */
     public function blobExists($container, $name)
     {
         try {
@@ -294,6 +278,14 @@ class GridFsSystem extends RemoteFileSystem
         return false;
     }
 
+    /**
+     * @param string $container
+     * @param string $name
+     * @param null   $data
+     * @param array  $properties
+     *
+     * @throws \DreamFactory\Core\Exceptions\DfException
+     */
     public function putBlobData($container, $name, $data = null, $properties = [])
     {
         try {
@@ -328,33 +320,27 @@ class GridFsSystem extends RemoteFileSystem
         return false;
     }
 
-    public function putBlobFromFile($container, $name, $localFileName = null, $properties = [])
-    {
-        $stop = 1;
-    }
-
-    public function copyBlob($container, $name, $src_container, $src_name, $properties = [])
-    {
-        // TODO: Implement copyBlob() method.
-    }
-
-    public function getBlobAsFile($container, $name, $localFileName = null)
-    {
-        $stop = 1;// TODO: Implement getBlobAsFile() method.
-    }
-
-    public function getBlobData($container, $name)
-    {
-        $stop = 1;// TODO: Implement getBlobAsFile() method.
-    }
-
+    /**
+     * @param string $container
+     * @param string $name
+     *
+     * @return array
+     */
     public function getBlobProperties($container, $name)
     {
         $obj = $this->gridFindOne($name);
-        return $this->getBlobMeta($obj);
 
+        return $this->getBlobMeta($obj);
     }
 
+    /**
+     *
+     * @param string $container
+     * @param string $name
+     * @param array  $params
+     *
+     * @throws \DreamFactory\Core\Exceptions\DfException
+     */
     public function streamBlob($container, $name, $params = [])
     {
         try {
@@ -431,5 +417,85 @@ class GridFsSystem extends RemoteFileSystem
     protected function deleteByObjectId($objId)
     {
         return $this->gridFS->delete($objId);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function listContainers($include_properties = false)
+    {
+        throw new NotImplementedException('Method ' . __METHOD__ . ' not applicable for current file system.');
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getContainer($container, $include_files = true, $include_folders = true, $full_tree = false)
+    {
+        throw new NotImplementedException('Method ' . __METHOD__ . ' not applicable for current file system.');
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getContainerProperties($container)
+    {
+        throw new NotImplementedException('Method ' . __METHOD__ . ' not applicable for current file system.');
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function createContainer($container, $check_exist = false)
+    {
+        throw new NotImplementedException('Method ' . __METHOD__ . ' not applicable for current file system.');
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function updateContainerProperties($container, $properties = [])
+    {
+        throw new NotImplementedException('Method ' . __METHOD__ . ' not applicable for current file system.');
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function deleteContainer($container, $force = false)
+    {
+        throw new NotImplementedException('Method ' . __METHOD__ . ' not applicable for current file system.');
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function putBlobFromFile($container, $name, $localFileName = null, $properties = [])
+    {
+        throw new NotImplementedException('Method ' . __METHOD__ . ' not applicable for current file system.');
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function copyBlob($container, $name, $src_container, $src_name, $properties = [])
+    {
+        throw new NotImplementedException('Method ' . __METHOD__ . ' not applicable for current file system.');
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getBlobAsFile($container, $name, $localFileName = null)
+    {
+        throw new NotImplementedException('Method ' . __METHOD__ . ' not applicable for current file system.');
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getBlobData($container, $name)
+    {
+        throw new NotImplementedException('Method ' . __METHOD__ . ' not applicable for current file system.');
     }
 }
