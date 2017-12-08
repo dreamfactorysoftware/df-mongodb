@@ -293,10 +293,8 @@ class GridFsSystem extends RemoteFileSystem
             $existing = null;
             $contentType = (empty($properties) && strpos($name, '/')) ? 'application/x-directory' : $properties;
             // If we are changing blob data, need to do it atomically here.
-            if ($this->request->getMethod() == 'PUT') {
-                // Check for existing
-                $existing = $this->gridFindOne($name);
-            }
+            // Check for existing
+            $existing = $this->gridFindOne($name);
             /** Need to open a stream to GridFS (this creates the empty file meta) $gfsStream */
             $gfsStream = $this->gridFS->openUploadStream($name, ['contentType' => $contentType]);
             /** Writes to the stream */
