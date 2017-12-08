@@ -3,6 +3,7 @@
 namespace DreamFactory\Core\MongoDb\Components;
 
 use DreamFactory\Core\Exceptions\InternalServerErrorException;
+use DreamFactory\Core\Exceptions\NotFoundException;
 use DreamFactory\Core\Exceptions\NotImplementedException;
 use DreamFactory\Core\File\Components\RemoteFileSystem;
 use DreamFactory\Core\Exceptions\DfException;
@@ -403,7 +404,7 @@ class GridFsSystem extends RemoteFileSystem
             $cursor = $this->gridFindOne($name);
             $this->deleteByObjectId($cursor->_id);
         } catch (\Exception $ex) {
-            throw new DfException('Failed to delete GridFS file "' . $name . '": ' . $ex->getMessage());
+            throw new NotFoundException('Failed to delete GridFS file "' . $name . '": ' . $ex->getMessage());
         }
     }
 
@@ -496,6 +497,10 @@ class GridFsSystem extends RemoteFileSystem
      */
     public function getBlobData($container, $name)
     {
-        throw new NotImplementedException('Method ' . __METHOD__ . ' not applicable for current file system.');
+        $blobData = $this->gridFindOne($name);
+        $stream = $this->gridFS->openDownloadStream($blobData->_id);
+        $data = stream_get_contents($stream);
+        return $data;
+
     }
 }
