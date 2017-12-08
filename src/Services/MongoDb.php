@@ -1,12 +1,12 @@
 <?php
+
 namespace DreamFactory\Core\MongoDb\Services;
 
 use DreamFactory\Core\Components\RequireExtensions;
+use DreamFactory\Core\Database\Services\BaseDbService;
 use DreamFactory\Core\Exceptions\InternalServerErrorException;
 use DreamFactory\Core\MongoDb\Database\Schema\Schema as DatabaseSchema;
 use DreamFactory\Core\MongoDb\Resources\Table;
-use DreamFactory\Core\Database\Resources\DbSchemaResource;
-use DreamFactory\Core\Database\Services\BaseDbService;
 use Illuminate\Database\DatabaseManager;
 use Jenssegers\Mongodb\Connection;
 
@@ -45,21 +45,6 @@ class MongoDb extends BaseDbService
      * @var Connection
      */
     protected $dbConn = null;
-    /**
-     * @var array
-     */
-    protected static $resources = [
-        DbSchemaResource::RESOURCE_NAME => [
-            'name'       => DbSchemaResource::RESOURCE_NAME,
-            'class_name' => DbSchemaResource::class,
-            'label'      => 'Schema',
-        ],
-        Table::RESOURCE_NAME  => [
-            'name'       => Table::RESOURCE_NAME,
-            'class_name' => Table::class,
-            'label'      => 'Table',
-        ],
-    ];
 
     //*************************************************************************
     //	Methods
@@ -125,6 +110,19 @@ class MongoDb extends BaseDbService
         $this->setConfigBasedCachePrefix($prefix . ':');
     }
 
+    public function getResourceHandlers()
+    {
+        $handlers = parent::getResourceHandlers();
+
+        $handlers[Table::RESOURCE_NAME] = [
+            'name'       => Table::RESOURCE_NAME,
+            'class_name' => Table::class,
+            'label'      => 'Table',
+        ];
+
+        return $handlers;
+    }
+
     protected function initializeConnection()
     {
         // add config to global for reuse, todo check existence and update?
@@ -140,7 +138,7 @@ class MongoDb extends BaseDbService
      */
     public function __destruct()
     {
-        if(env('APP_ENV') !== 'testing') {
+        if (env('APP_ENV') !== 'testing') {
             /** @type DatabaseManager $db */
             $db = app('db');
             $db->disconnect('service.' . $this->name);
