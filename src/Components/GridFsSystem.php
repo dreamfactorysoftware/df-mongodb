@@ -7,6 +7,8 @@ use DreamFactory\Core\Exceptions\NotFoundException;
 use DreamFactory\Core\Exceptions\NotImplementedException;
 use DreamFactory\Core\File\Components\RemoteFileSystem;
 use DreamFactory\Core\Exceptions\DfException;
+use Jenssegers\Mongodb\Connection;
+
 use MongoDB\Client as MongoDBClient;
 use Illuminate\Http\Request;
 
@@ -86,7 +88,7 @@ class GridFsSystem extends RemoteFileSystem
             $port = array_get($config, 'port');
             $username = array_get($config, 'username');
             $password = array_get($config, 'password');
-            $connectionStr = sprintf("mongodb://%s:%s/%s", $host,
+            $connectionStr = sprintf("mongodb://%s:%s", $host,
                 $port, $db);
 
             if(!empty($username) && !empty($password)){
