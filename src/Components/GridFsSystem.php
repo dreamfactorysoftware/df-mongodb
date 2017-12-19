@@ -91,12 +91,11 @@ class GridFsSystem extends RemoteFileSystem
             $connectionStr = sprintf("mongodb://%s:%s", $host,
                 $port, $db);
 
-            if(!empty($username) && !empty($password)){
+            if (!empty($username) && !empty($password)) {
                 $connectionOptions = [
                     'username' => $username,
                     'password' => $password,
                 ];
-
             }
 
             if (!empty($options)) {
@@ -312,6 +311,17 @@ class GridFsSystem extends RemoteFileSystem
     /**
      * @inheritdoc
      */
+    public function putBlobFromFile($container, $name, $localFileName = null, $properties = [])
+    {
+        $fp = fopen($localFileName, 'r');
+        $fileData = stream_get_contents($fp);
+
+        return $this->putBlobData($container, $name, $fileData, $properties);
+    }
+
+    /**
+     * @inheritdoc
+     */
     public function fileExists($container, $path)
     {
         if ($this->blobExists($container, $path)) {
@@ -471,14 +481,6 @@ class GridFsSystem extends RemoteFileSystem
     /**
      * @inheritdoc
      */
-    public function putBlobFromFile($container, $name, $localFileName = null, $properties = [])
-    {
-        throw new NotImplementedException('Method ' . __METHOD__ . ' not applicable for current file system.');
-    }
-
-    /**
-     * @inheritdoc
-     */
     public function copyBlob($container, $name, $src_container, $src_name, $properties = [])
     {
         throw new NotImplementedException('Method ' . __METHOD__ . ' not applicable for current file system.');
@@ -500,7 +502,7 @@ class GridFsSystem extends RemoteFileSystem
         $blobData = $this->gridFindOne($name);
         $stream = $this->gridFS->openDownloadStream($blobData->_id);
         $data = stream_get_contents($stream);
-        return $data;
 
+        return $data;
     }
 }
