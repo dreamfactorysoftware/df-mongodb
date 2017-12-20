@@ -364,7 +364,7 @@ class GridFsSystem extends RemoteFileSystem
             $size = $fullsize = intval($fileObj->length);
 
             header('Last-Modified: ' . $date->format(\DateTime::ATOM));
-            header('Content-Type: ' . $fileObj->contentType);
+            header('Content-Type: ' . (isset($fileObj->contentType)) ? $fileObj->contentType : '');
 
             $disposition =
                 (isset($params['disposition']) && !empty($params['disposition'])) ? $params['disposition']
