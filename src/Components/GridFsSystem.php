@@ -206,7 +206,7 @@ class GridFsSystem extends RemoteFileSystem
         $return = [
             'oid'            => (string)$obj->_id,
             'name'           => $obj->filename,
-            'content_type'   => $obj->contentType,
+            'content_type'   => (isset($obj->contentType)) ? $obj->contentType : '',
             'content_length' => $obj->length,
             'last_modified'  => $date->format(\DateTime::ATOM),
             'path'           => $obj->filename,
