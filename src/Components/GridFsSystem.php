@@ -8,6 +8,7 @@ use DreamFactory\Core\Exceptions\NotImplementedException;
 use DreamFactory\Core\File\Components\RemoteFileSystem;
 use DreamFactory\Core\Exceptions\DfException;
 use Jenssegers\Mongodb\Connection;
+use DreamFactory\Core\Utility\FileUtilities;
 
 use MongoDB\Client as MongoDBClient;
 use Illuminate\Http\Request;
@@ -206,7 +207,7 @@ class GridFsSystem extends RemoteFileSystem
         $return = [
             'oid'            => (string)$obj->_id,
             'name'           => $obj->filename,
-            'content_type'   => $obj->contentType,
+            'content_type'   => (isset($obj->contentType)) ? $obj->contentType : '',
             'content_length' => $obj->length,
             'last_modified'  => $date->format(\DateTime::ATOM),
             'path'           => $obj->filename,
@@ -364,7 +365,15 @@ class GridFsSystem extends RemoteFileSystem
             $size = $fullsize = intval($fileObj->length);
 
             header('Last-Modified: ' . $date->format(\DateTime::ATOM));
-            header('Content-Type: ' . $fileObj->contentType);
+
+            /** If content type is not set, try to determine it. */
+            if(!isset($fileObj->contentType)){
+                $ext = FileUtilities::getFileExtension($name);
+                $contentType = FileUtilities::determineContentType($ext);
+                header('Content-Type: ' . $contentType);
+            } else {
+                header('Content-Type: ' . $fileObj->contentType);
+            }
 
             $disposition =
                 (isset($params['disposition']) && !empty($params['disposition'])) ? $params['disposition']
