@@ -71,6 +71,7 @@ class Table extends BaseNoSqlDbTableResource
      * @param $name
      *
      * @return Collection|null
+     * @throws \Exception
      */
     public function selectTable($name)
     {
@@ -714,6 +715,8 @@ class Table extends BaseNoSqlDbTableResource
                                 }
                             } elseif (isset($data['$id'])) {
                                 $record[$key] = static::idToMongoId($data['$id']);
+                            } elseif (isset($data['$oid'])) {
+                                $record[$key] = static::idToMongoId($data['$oid']);
                             } else {
                                 $record[$key] = static::toMongoObjects($data);
                             }
@@ -765,6 +768,8 @@ class Table extends BaseNoSqlDbTableResource
         if (is_array($value)) {
             if (array_key_exists('$id', $value)) {
                 $value = array_get($value, '$id');
+            } elseif (array_key_exists('$oid', $value)) {
+                $value = array_get($value, '$oid');
             }
         }
 
