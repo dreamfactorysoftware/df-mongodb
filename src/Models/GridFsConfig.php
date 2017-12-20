@@ -1,7 +1,7 @@
 <?php
 
 namespace DreamFactory\Core\MongoDb\Models;
-
+use DreamFactory\Core\File\Models\FilePublicPath;
 /**
  * GridFSConfig
  *
@@ -18,6 +18,7 @@ class GridFsConfig extends MongoDbConfig
         'username',
         'password',
         'bucket_name',
+        'public_path',
         'dsn',
         'options',
         'driver_options',
@@ -26,7 +27,10 @@ class GridFsConfig extends MongoDbConfig
     public static function getConfig($id, $local_config = null, $protect = true)
     {
         $results = parent::getConfig($id, $local_config, $protect);
-
+        /** @var FilePublicPath $pathConfig */
+        if (!empty($pathConfig = FilePublicPath::find($id))) {
+            $results = array_merge($results, $pathConfig->toArray());
+        }
         return $results;
     }
 
@@ -36,6 +40,15 @@ class GridFsConfig extends MongoDbConfig
     public static function setConfig($id, $config, $local_config = null)
     {
         $results = parent::setConfig($id, $config, $local_config);
+        if(!isset($config['container'])){
+            $config['container'] = $config['database'];
+        }
+        $resultPath = FilePublicPath::setConfig($id, $config, $local_config);
+        if ($resultPath) {
+            $results = array_merge((array)$results, (array)$resultPath);
+        }
+
+
         if (isset($config['bucket_name'])) {
             $results['bucket_name'] = $config['bucket_name'];
         }
@@ -51,6 +64,8 @@ class GridFsConfig extends MongoDbConfig
     public static function getConfigSchema()
     {
         $schema = (array)parent::getConfigSchema();
+        $pathSchema = (array)FilePublicPath::getConfigSchema();
+        $schema = array_merge($schema, $pathSchema);
         // Allow upsert not relevant to gridfs
         unset($schema['allow_upsert']);
 
