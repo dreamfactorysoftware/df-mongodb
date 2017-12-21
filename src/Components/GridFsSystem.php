@@ -367,7 +367,7 @@ class GridFsSystem extends RemoteFileSystem
             header('Last-Modified: ' . $date->format(\DateTime::ATOM));
 
             /** If content type is not set, try to determine it. */
-            if(!isset($fileObj->contentType)){
+            if (!isset($fileObj->contentType)) {
                 $ext = FileUtilities::getFileExtension($name);
                 $contentType = FileUtilities::determineContentType($ext);
                 header('Content-Type: ' . $contentType);
@@ -404,8 +404,17 @@ class GridFsSystem extends RemoteFileSystem
 
             header('Content-Length:' . $size);
 
-            echo stream_get_contents($stream, $end, $start);
-        } catch (\Exception $ex) {
+            while (!feof($stream)) {
+                if ($start = -1 && $end = -1) {
+                    /** if entire file is requested... */
+                    echo stream_get_contents($stream,  \Config::get('df.file_chunk_size'));
+                } else {
+                    /** if Bit of file, in chunks */
+                    echo stream_get_contents($stream, $end, $start);
+                }
+            }
+        } catch
+        (\Exception $ex) {
             throw new DfException('Failed to retrieve GridFS file "' . $name . '": ' . $ex->getMessage());
         }
     }
