@@ -7,7 +7,6 @@ use DreamFactory\Core\Exceptions\NotFoundException;
 use DreamFactory\Core\Exceptions\NotImplementedException;
 use DreamFactory\Core\File\Components\RemoteFileSystem;
 use DreamFactory\Core\Exceptions\DfException;
-use Jenssegers\Mongodb\Connection;
 use DreamFactory\Core\Utility\FileUtilities;
 
 use MongoDB\Client as MongoDBClient;
