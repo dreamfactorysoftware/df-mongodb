@@ -1,4 +1,5 @@
 <?php
+
 use DreamFactory\Core\Enums\Verbs;
 use DreamFactory\Core\Enums\ApiOptions;
 use DreamFactory\Core\Enums\DataFormats;
@@ -31,8 +32,7 @@ class MongoDbTest extends \DreamFactory\Core\Database\Testing\DbServiceTestCase
     {
         parent::setup();
 
-        $options =
-            ['username' => env('MONGODB_USER'), 'password' => env('MONGODB_PASSWORD'), 'db' => env('MONGODB_DB')];
+        $options = [];
         $this->service = new MongoDb(
             [
                 'name'        => static::SERVICE_NAME,
@@ -40,7 +40,14 @@ class MongoDbTest extends \DreamFactory\Core\Database\Testing\DbServiceTestCase
                 'description' => 'MongoDB database for testing',
                 'is_active'   => true,
                 'type'        => 'mongodb',
-                'config'      => ['dsn' => env('MONGODB_DSN'), 'options' => $options]
+                'config'      => [
+                    'host'     => 'localhost',
+                    'dsn'      => env('MONGODB_DSN'),
+                    'username' => env('MONGODB_USER'),
+                    'password' => env('MONGODB_PASSWORD'),
+                    'database' => env('MONGODB_DB'),
+                    'options'  => $options
+                ]
             ]
         );
     }
@@ -64,6 +71,7 @@ class MongoDbTest extends \DreamFactory\Core\Database\Testing\DbServiceTestCase
         $request = new TestServiceRequest();
         $rs = $this->service->handleRequest($request);
         $data = $rs->getContent();
+
         $this->assertArrayHasKey(static::$wrapper, $data);
         $this->assertCount(2, $data[static::$wrapper]);
 //        $this->assert( '_schema', $data[static::$wrapper] );
@@ -77,6 +85,7 @@ class MongoDbTest extends \DreamFactory\Core\Database\Testing\DbServiceTestCase
         $request = new TestServiceRequest();
         $rs = $this->service->handleRequest($request, Schema::RESOURCE_NAME);
         $data = $rs->getContent();
+
         $this->assertArrayHasKey(static::$wrapper, $data);
         $this->assertEmpty($data[static::$wrapper]);
     }
@@ -84,8 +93,11 @@ class MongoDbTest extends \DreamFactory\Core\Database\Testing\DbServiceTestCase
     public function testCreateTable()
     {
         $request = new TestServiceRequest(Verbs::POST);
+
         $rs = $this->service->handleRequest($request, Schema::RESOURCE_NAME . '/' . static::TABLE_NAME);
+
         $data = $rs->getContent();
+
         $this->assertArrayHasKey('name', $data);
         $this->assertSame(static::TABLE_NAME, $data['name']);
     }
@@ -119,7 +131,7 @@ class MongoDbTest extends \DreamFactory\Core\Database\Testing\DbServiceTestCase
 	    ]';
 
         if (static::$wrapper) {
-            $payload = '{' . static::$wrapper . ': ' . $payload . '}';
+            $payload = '{' . '"' . static::$wrapper . '" : ' . $payload . '}';
         }
         $request = new TestServiceRequest(Verbs::POST);
         $request->setContent($payload, DataFormats::JSON);
@@ -131,31 +143,31 @@ class MongoDbTest extends \DreamFactory\Core\Database\Testing\DbServiceTestCase
 
     public function testGetRecordById()
     {
-        $request = new TestServiceRequest();
+        $request = new TestServiceRequest(Verbs::GET, ['id_type' => 'integer']);
+
         $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME . '/1');
         $data = $rs->getContent();
+
         $this->assertTrue($data[Table::DEFAULT_ID_FIELD] == 1);
     }
 
     public function testGetRecordsByIds()
     {
-        $request = new TestServiceRequest(Verbs::GET, [ApiOptions::IDS => '1,2,3']);
+        $request = new TestServiceRequest(Verbs::GET, ['id_type' => 'integer', ApiOptions::IDS => '1,2,3']);
+
         $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
         $data = $rs->getContent();
         $ids = implode(",", array_column($data[static::$wrapper], Table::DEFAULT_ID_FIELD));
+
         $this->assertTrue($ids == "1,2,3");
     }
 
     public function testResourceNotFound()
     {
-        $request = new TestServiceRequest(Verbs::GET);
-        try {
-            $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME . '/5');
-            $this->assertTrue(false);
-        } catch (\Exception $ex) {
-            $this->assertInstanceOf('\DreamFactory\Core\Common\Exceptions\RestException', $ex);
-            $this->assertEquals(404, $ex->getCode());
-        }
+        $request = new TestServiceRequest(Verbs::GET, ['id_type' => 'integer']);
+        $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME . '/5');
+        $this->assertInstanceOf('\DreamFactory\Core\Utility\ServiceResponse', $rs);
+        $this->assertEquals(404, $rs->getStatusCode());
     }
 
     /************************************************
@@ -164,9 +176,9 @@ class MongoDbTest extends \DreamFactory\Core\Database\Testing\DbServiceTestCase
 
     public function testCreateRecord()
     {
-        $payload = '[{"name":"test4","complete":false}]';
+        $payload = '[{"_id": 4, "name":"test4","complete":false}]';
         if (static::$wrapper) {
-            $payload = '{' . static::$wrapper . ': ' . $payload . '}';
+            $payload = '{' . '"' . static::$wrapper . '" : ' . $payload . '}';
         }
         $request = new TestServiceRequest(Verbs::POST);
         $request->setContent($payload, DataFormats::JSON);
@@ -176,34 +188,11 @@ class MongoDbTest extends \DreamFactory\Core\Database\Testing\DbServiceTestCase
         $this->assertCount(1, $data[static::$wrapper]);
     }
 
-    public function testCreateRecordsNoWrap()
-    {
-        $payload = '[
-		{
-			"name": "test5",
-			"complete": false
-		},
-		{
-			"name": "test6",
-			"complete": true
-		}
-	]';
-
-        $request = new TestServiceRequest(Verbs::POST);
-        $request->setContent($payload, DataFormats::JSON);
-        $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
-        $expected = '[{"id":5},{"id":6}]';
-        if (static::$wrapper) {
-            $expected = '{' . static::$wrapper . ': ' . $payload . '}';
-        }
-        $this->assertTrue($rs->getContent() == $expected);
-    }
-
     public function testCreateRecordReturnFields()
     {
-        $payload = '[{"name":"test7","complete":true}]';
+        $payload = '[{"_id": 5, "name":"test7","complete":true}]';
         if (static::$wrapper) {
-            $payload = '{' . static::$wrapper . ': ' . $payload . '}';
+            $payload = '{' . '"' . static::$wrapper . '" : ' . $payload . '}';
         }
 
         $request = new TestServiceRequest(Verbs::POST, [ApiOptions::FIELDS => 'name,complete']);
@@ -220,25 +209,29 @@ class MongoDbTest extends \DreamFactory\Core\Database\Testing\DbServiceTestCase
     {
         $payload = '[
             {
+                "_id": 8,
                 "name": "test8",
                 "complete": false
             },
             {
+                "_id": 5,
                 "name": "test5",
                 "complete": true
             },
             {
+                "_id": 9,
                 "name": "test9",
                 "complete": null
             }
         ]';
 
         if (static::$wrapper) {
-            $payload = '{' . static::$wrapper . ': ' . $payload . '}';
+            $payload = '{' . '"' . static::$wrapper . '" : ' . $payload . '}';
         }
         $request = new TestServiceRequest(Verbs::POST, [ApiOptions::CONTINUES => true]);
         $request->setContent($payload, DataFormats::JSON);
         $rs = $this->service->handleRequest($request, Table::RESOURCE_NAME . '/' . static::TABLE_NAME);
+        dd($rs->getContent());
         $err = '{"error":{"context":{"error":[1],' . static::$wrapper . ':[{"id":8},"SQLSTATE[23000]: ';
         $this->assertContains($err, $rs->getContent());
         $this->assertContains("Duplicate entry 'test5'", $rs->getContent());
@@ -260,7 +253,7 @@ class MongoDbTest extends \DreamFactory\Core\Database\Testing\DbServiceTestCase
             }
         ]';
         if (static::$wrapper) {
-            $payload = '{' . static::$wrapper . ': ' . $payload . '}';
+            $payload = '{' . '"' . static::$wrapper . '" : ' . $payload . '}';
         }
 
         $request = new TestServiceRequest(Verbs::POST, [ApiOptions::ROLLBACK => true]);
@@ -277,7 +270,7 @@ class MongoDbTest extends \DreamFactory\Core\Database\Testing\DbServiceTestCase
     {
         $payload = '[{"name":"test1", "complete":true}]';
         if (static::$wrapper) {
-            $payload = '{' . static::$wrapper . ': ' . $payload . '}';
+            $payload = '{' . '"' . static::$wrapper . '" : ' . $payload . '}';
         }
 
         $request = new TestServiceRequest(Verbs::POST);
@@ -289,7 +282,7 @@ class MongoDbTest extends \DreamFactory\Core\Database\Testing\DbServiceTestCase
     {
         $payload = '[{"name":null, "complete":true}]';
         if (static::$wrapper) {
-            $payload = '{' . static::$wrapper . ': ' . $payload . '}';
+            $payload = '{' . '"' . static::$wrapper . '" : ' . $payload . '}';
         }
 
         $request = new TestServiceRequest(Verbs::POST);
@@ -303,7 +296,7 @@ class MongoDbTest extends \DreamFactory\Core\Database\Testing\DbServiceTestCase
     {
         $payload = '[{"complete":true}]';
         if (static::$wrapper) {
-            $payload = '{' . static::$wrapper . ': ' . $payload . '}';
+            $payload = '{' . '"' . static::$wrapper . '" : ' . $payload . '}';
         }
 
         $request = new TestServiceRequest(Verbs::POST);
