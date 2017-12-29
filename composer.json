@@ -23,14 +23,14 @@
     }
   ],
   "support":     {
-    "email":  "support@dreamfactory.com",
+    "email":  "dspsupport@dreamfactory.com",
     "source": "https://github.com/dreamfactorysoftware/df-mongodb",
     "issues": "https://github.com/dreamfactorysoftware/df-mongodb/issues",
     "wiki":   "https://wiki.dreamfactory.com"
   },
   "require":     {
-    "dreamfactory/df-database": "~0.8.0",
-    "jenssegers/mongodb":       "3.2.*"
+    "dreamfactory/df-database": "~0.9.0",
+    "jenssegers/mongodb":       "~3.3.0"
   },
   "autoload":    {
     "psr-4": {
@@ -39,7 +39,12 @@
   },
   "extra":       {
     "branch-alias": {
-      "dev-develop": "0.14.x-dev"
+      "dev-develop": "0.15.x-dev"
+    },
+    "laravel": {
+      "providers": [
+        "DreamFactory\\Core\\MongoDb\\ServiceProvider"
+      ]
     }
   }
 }

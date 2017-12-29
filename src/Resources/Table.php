@@ -71,6 +71,7 @@ class Table extends BaseNoSqlDbTableResource
      * @param $name
      *
      * @return Collection|null
+     * @throws \Exception
      */
     public function selectTable($name)
     {
@@ -714,6 +715,8 @@ class Table extends BaseNoSqlDbTableResource
                                 }
                             } elseif (isset($data['$id'])) {
                                 $record[$key] = static::idToMongoId($data['$id']);
+                            } elseif (isset($data['$oid'])) {
+                                $record[$key] = static::idToMongoId($data['$oid']);
                             } else {
                                 $record[$key] = static::toMongoObjects($data);
                             }
@@ -765,6 +768,8 @@ class Table extends BaseNoSqlDbTableResource
         if (is_array($value)) {
             if (array_key_exists('$id', $value)) {
                 $value = array_get($value, '$id');
+            } elseif (array_key_exists('$oid', $value)) {
+                $value = array_get($value, '$oid');
             }
         }
 
@@ -1297,7 +1302,7 @@ class Table extends BaseNoSqlDbTableResource
     protected function runQuery($table, $criteria, $extras)
     {
         $collection = $this->selectTable($table);
-        $schema = $this->getTableSchema(null, $table);
+        $schema = $this->parent->getTableSchema($table);
         if (!$schema) {
             throw new NotFoundException("Table '$table' does not exist in the database.");
         }
@@ -1320,7 +1325,7 @@ class Table extends BaseNoSqlDbTableResource
         $sort = static::buildSortArray(array_get($extras, ApiOptions::ORDER));
         $countOnly = array_get_bool($extras, ApiOptions::COUNT_ONLY);
         $includeCount = array_get_bool($extras, ApiOptions::INCLUDE_COUNT);
-        $maxAllowed = static::getMaxRecordsReturnedLimit();
+        $maxAllowed = $this->getMaxRecordsReturnedLimit();
         $needLimit = false;
         if (($limit < 1) || ($limit > $maxAllowed)) {
             // impose a limit to protect server

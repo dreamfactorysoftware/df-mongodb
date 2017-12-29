@@ -2,7 +2,7 @@
 namespace DreamFactory\Core\MongoDb\Models;
 
 use DreamFactory\Core\Components\RequireExtensions;
-use DreamFactory\Core\Database\Components\SupportsUpsertAndCache;
+use DreamFactory\Core\Database\Components\SupportsExtraDbConfigs;
 use DreamFactory\Core\Exceptions\BadRequestException;
 use DreamFactory\Core\Models\BaseServiceConfigModel;
 use DreamFactory\Core\MongoDb\Services\MongoDb;
@@ -23,7 +23,7 @@ use DreamFactory\Core\MongoDb\Services\MongoDb;
  */
 class MongoDbConfig extends BaseServiceConfigModel
 {
-    use RequireExtensions, SupportsUpsertAndCache;
+    use RequireExtensions, SupportsExtraDbConfigs;
 
     protected $table = 'mongodb_config';
 
