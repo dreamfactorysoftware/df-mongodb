@@ -190,6 +190,10 @@ class GridFsSystem extends RemoteFileSystem
             }
         }
 
+        if(empty($reduced) && !empty($prefix)){
+            return [];
+        }
+
         $reduced = (empty($reduced)) ? $return : $reduced;
 
         return $this->filterPaths($prefix, $delimiter, $reduced);
