@@ -11,6 +11,7 @@ use DreamFactory\Core\Utility\FileUtilities;
 
 use MongoDB\Client as MongoDBClient;
 use Illuminate\Http\Request;
+use MongoDB\Driver\Exception\ConnectionTimeoutException;
 
 class GridFsSystem extends RemoteFileSystem
 {
@@ -101,9 +102,9 @@ class GridFsSystem extends RemoteFileSystem
             if (!empty($options)) {
                 $connectionOptions += $options;
             }
-            $this->blobConn = new MongoDBClient($connectionStr, $connectionOptions);
+            $this->blobConn = $this->createConnection($connectionStr, $connectionOptions);
         } else {
-            $this->blobConn = new MongoDBClient($dsn);
+            $this->blobConn = $this->createConnection($dsn);
         }
 
         $bucketName = array_get($config, 'bucket_name');
@@ -113,6 +114,11 @@ class GridFsSystem extends RemoteFileSystem
         } else {
             $this->gridFS = $this->blobConn->$db->selectGridFSBucket();
         }
+    }
+
+    protected function createConnection($connectionStr, $options = [])
+    {
+        return new MongoDBClient($connectionStr, $options);
     }
 
     /**
@@ -190,7 +196,7 @@ class GridFsSystem extends RemoteFileSystem
             }
         }
 
-        if(empty($reduced) && !empty($prefix)){
+        if (empty($reduced) && !empty($prefix)) {
             return [];
         }
 
@@ -359,7 +365,6 @@ class GridFsSystem extends RemoteFileSystem
     public function streamBlob($container, $name, $params = [])
     {
         try {
-
             $fileObj = $this->gridFindOne($name);
             $range = (isset($params['range'])) ? $params['range'] : null;
             $start = $end = -1;
@@ -410,7 +415,7 @@ class GridFsSystem extends RemoteFileSystem
             while (!feof($stream)) {
                 if ($start = -1 && $end = -1) {
                     /** if entire file is requested... */
-                    echo stream_get_contents($stream,  \Config::get('df.file_chunk_size'));
+                    echo stream_get_contents($stream, \Config::get('df.file_chunk_size'));
                 } else {
                     /** if Bit of file, in chunks */
                     echo stream_get_contents($stream, $end, $start);
