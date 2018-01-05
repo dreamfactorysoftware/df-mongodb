@@ -153,6 +153,8 @@ class GridFsSystem extends RemoteFileSystem
         try {
             $params = ['filename' => $name];
             $obj = $this->gridFS->findOne($params);
+        } catch (ConnectionTimeoutException $ex) {
+            throw new ConnectionTimeoutException($ex);
         } catch (\Exception $ex) {
             throw new NotFoundException('Could not find file "' . $name . '": ' . $ex->getMessage());
         }
@@ -421,8 +423,9 @@ class GridFsSystem extends RemoteFileSystem
                     echo stream_get_contents($stream, $end, $start);
                 }
             }
-        } catch
-        (\Exception $ex) {
+        } catch (ConnectionTimeoutException $ex) {
+            throw new ConnectionTimeoutException($ex->getMessage());
+        } catch (\Exception $ex) {
             throw new DfException('Failed to retrieve GridFS file "' . $name . '": ' . $ex->getMessage());
         }
     }
@@ -439,6 +442,8 @@ class GridFsSystem extends RemoteFileSystem
         try {
             $cursor = $this->gridFindOne($name);
             $this->deleteByObjectId($cursor->_id);
+        } catch (ConnectionTimeoutException $ex) {
+            throw new ConnectionTimeoutException($ex->getMessage());
         } catch (\Exception $ex) {
             throw new NotFoundException('Failed to delete GridFS file "' . $name . '": ' . $ex->getMessage());
         }
