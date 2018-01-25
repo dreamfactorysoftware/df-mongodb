@@ -1314,8 +1314,10 @@ class Table extends BaseNoSqlDbTableResource
         // see if we need to add anymore fields to select for related retrieval
         if (('*' !== $fields) && !empty($availableRelations) && (!empty($related) || $schema->fetchRequiresRelations)) {
             foreach ($availableRelations as $relation) {
-                if (false === array_search($relation->field, $fields)) {
-                    $select[] = $relation->field;
+                foreach ($relation->field as $relField) {
+                    if (false === array_search($relField, $fields)) {
+                        $select[] = $relField;
+                    }
                 }
             }
         }
