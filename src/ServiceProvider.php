@@ -20,24 +20,26 @@ class ServiceProvider extends MongodbServiceProvider
         $this->app->resolving('df.service', function (ServiceManager $df) {
             $df->addType(
                 new ServiceType([
-                    'name'            => 'mongodb',
-                    'label'           => 'MongoDB',
-                    'description'     => 'Database service for MongoDB connections.',
-                    'group'           => ServiceTypeGroups::DATABASE,
-                    'config_handler'  => MongoDbConfig::class,
-                    'factory'         => function ($config) {
+                    'name'                  => 'mongodb',
+                    'label'                 => 'MongoDB',
+                    'description'           => 'Database service for MongoDB connections.',
+                    'group'                 => ServiceTypeGroups::DATABASE,
+                    'subscription_required' => LicenseLevel::SILVER,
+                    'config_handler'        => MongoDbConfig::class,
+                    'factory'               => function ($config) {
                         return new MongoDb($config);
                     },
                 ])
             );
             $df->addType(
                 new ServiceType([
-                    'name'            => 'gridfs',
-                    'label'           => 'GridFS',
-                    'description'     => 'GridFS File Storage services.',
-                    'group'           => ServiceTypeGroups::FILE,
-                    'config_handler'  => GridFsConfig::class,
-                    'factory'         => function ($config) {
+                    'name'                  => 'gridfs',
+                    'label'                 => 'GridFS',
+                    'description'           => 'GridFS File Storage services.',
+                    'group'                 => ServiceTypeGroups::FILE,
+                    'subscription_required' => LicenseLevel::SILVER,
+                    'config_handler'        => GridFsConfig::class,
+                    'factory'               => function ($config) {
                         return new GridFsService($config);
                     },
                 ])
