@@ -2,6 +2,7 @@
 namespace DreamFactory\Core\MongoDb;
 
 use DreamFactory\Core\Enums\ServiceTypeGroups;
+use DreamFactory\Core\Enums\LicenseLevel;
 use DreamFactory\Core\MongoDb\Models\MongoDbConfig;
 use DreamFactory\Core\MongoDb\Models\GridFsConfig;
 use DreamFactory\Core\MongoDb\Services\GridFsService;
