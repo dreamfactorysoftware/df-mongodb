@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+## [0.16.0] - 2019-07-15
+### Changed
+- Licensing changes
 ## [0.15.1] - 2018-01-25
 ### Changed
 - Adhere to base database changes
@@ -124,7 +127,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## 0.1.0 - 2015-10-24
 First official release working with the new [df-core](https://github.com/dreamfactorysoftware/df-core) library.
 
-[Unreleased]: https://github.com/dreamfactorysoftware/df-mongodb/compare/0.15.1...HEAD
+[Unreleased]: https://github.com/dreamfactorysoftware/df-mongodb/compare/0.16.0...HEAD
+[0.16.0]: https://github.com/dreamfactorysoftware/df-mongodb/compare/0.15.1...0.16.0
 [0.15.1]: https://github.com/dreamfactorysoftware/df-mongodb/compare/0.15.0...0.15.1
 [0.15.0]: https://github.com/dreamfactorysoftware/df-mongodb/compare/0.14.0...0.15.0
 [0.14.0]: https://github.com/dreamfactorysoftware/df-mongodb/compare/0.13.0...0.14.0
