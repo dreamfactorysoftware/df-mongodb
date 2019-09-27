@@ -30,7 +30,7 @@
   },
   "require":     {
     "dreamfactory/df-database": "dev-laravel-upgrade",
-    "jenssegers/mongodb":       "~3.4.0"
+    "jenssegers/mongodb":       "~3.5.0"
   },
   "autoload":    {
     "psr-4": {
