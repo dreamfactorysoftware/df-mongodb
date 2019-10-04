@@ -28,6 +28,8 @@
     "issues": "https://github.com/dreamfactorysoftware/df-mongodb/issues",
     "wiki":   "https://wiki.dreamfactory.com"
   },
+  "minimum-stability": "dev",
+  "prefer-stable": true,
   "require":     {
     "dreamfactory/df-database": "~0.9.4",
     "jenssegers/mongodb":       "~3.3.0"
