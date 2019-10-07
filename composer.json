@@ -31,7 +31,7 @@
   "minimum-stability": "dev",
   "prefer-stable": true,
   "require":     {
-    "dreamfactory/df-database": "~0.9.4",
+    "dreamfactory/df-database": "~0.9.5",
     "jenssegers/mongodb":       "~3.3.0"
   },
   "autoload":    {
