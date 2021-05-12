@@ -681,9 +681,7 @@ class Table extends BaseNoSqlDbTableResource
                     } elseif ($data instanceof Binary) {
                         if ($data->getType() == 0) {
                             $data = $data->getData();
-                        } else {
-                            $data;
-                        }
+                        } 
                     }
                 }
             }
