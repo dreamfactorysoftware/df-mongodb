@@ -679,7 +679,9 @@ class Table extends BaseNoSqlDbTableResource
                         $data = $data->toDateTime();
                         $data = ['$date' => $data->format($cfgFormat)];
                     } elseif ($data instanceof Binary) {
-                        $data = $data->getData();
+                        if ($data->getType() == 0) {
+                            $data = $data->getData();
+                        } 
                     }
                 }
             }
