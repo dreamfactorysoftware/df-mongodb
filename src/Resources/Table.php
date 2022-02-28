@@ -1354,7 +1354,33 @@ class Table extends BaseNoSqlDbTableResource
             return $count;
         }
 
-        $result = $collection->find($criteria, $options);
+        // MongoDb has a 100Mb system memory limit when processing. Occasionaly people make huge requests which
+        // require more. To do so, we need to pass a "allowDiskUse" option, but the regular "find" method of our 
+        // driver does not allow for it, thus we need to use the aggregate method. We will allow the user to pass
+        // a "allowDiskUse" parameter to turn this feature on:
+        if (isset($extras['allowDiskUse'])) {
+            $pipeline = [];
+            if (isset($options['sort'])) {
+                array_push($pipeline, array('$sort' => $options['sort']));
+            }
+
+            array_push($pipeline, array('$skip' => $options['skip']));
+            array_push($pipeline, array('$limit' => $options['limit']));
+
+            if (isset($options['projection'])) {
+                array_push($pipeline, array('$project' => $options['projection']));
+            }
+            // The mongodb server can take a long time to process these kinds of request, and can timeout the php 30 seconds default.
+            // So we allow a parameter to be passed (with an integer) to increase this.
+            if (isset($extras['set_time_limit'])) {
+                set_time_limit($extras['set_time_limit']);
+            }
+            $result = $collection->aggregate($pipeline, ["allowDiskUse" => true]);
+        } else {
+            // Just run the good old regular call.
+            $result = $collection->find($criteria, $options);
+        }
+
         $data = static::cleanRecords($result->toArray());
 
         if (!empty($data) && (!empty($related) || $schema->fetchRequiresRelations)) {
