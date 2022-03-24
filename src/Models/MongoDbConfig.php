@@ -62,7 +62,7 @@ class MongoDbConfig extends BaseServiceConfigModel
         ) {
             //  Attempt to find db in connection string
             $dsn = strval(array_get($data, 'dsn'));
-            $db = strstr(substr($dsn, MongoDb::DSN_PREFIX_LENGTH), '/');
+            $db = strstr(preg_replace('/mongodb(\+srv)?\:\/\//', '', $dsn), '/');
             if (false !== $pos = strpos($db, '?')) {
                 $db = substr($db, 0, $pos);
             }

@@ -47,6 +47,8 @@ class GridFsSystem extends RemoteFileSystem
 
         if (!empty($dsn = strval(array_get($config, 'dsn')))) {
             // add prefix if not there
+            // NOTE: We may want to change this to match the code in MondoDB.php as a regex check
+            // if this breaks for calling Atlas / replica sets with the +srv option
             if (0 != substr_compare($dsn, static::DSN_PREFIX, 0, static::DSN_PREFIX_LENGTH, true)) {
                 $dsn = static::DSN_PREFIX . $dsn;
                 $config['dsn'] = $dsn;
@@ -64,6 +66,8 @@ class GridFsSystem extends RemoteFileSystem
                 $config['database'] = $db;
             } else {
                 //  Attempt to find db in connection string
+                // NOTE: We may want to change this to match the code in MondoDB.php as a regex replacement
+                // if this breaks for calling Atlas / replica sets with the +srv option
                 $db = strstr(substr($dsn, static::DSN_PREFIX_LENGTH), '/');
                 if (false !== $pos = strpos($db, '?')) {
                     $db = substr($db, 0, $pos);
