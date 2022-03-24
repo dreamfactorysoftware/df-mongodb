@@ -32,10 +32,6 @@ class MongoDb extends BaseDbService
      * Connection string prefix
      */
     const DSN_PREFIX = 'mongodb://';
-    /**
-     * Connection string prefix length
-     */
-    const DSN_PREFIX_LENGTH = 10;
 
     //*************************************************************************
     //	Members
@@ -65,7 +61,7 @@ class MongoDb extends BaseDbService
         $this->config['driver'] = 'mongodb';
         if (!empty($dsn = strval(array_get($this->config, 'dsn')))) {
             // add prefix if not there
-            if (0 != substr_compare($dsn, static::DSN_PREFIX, 0, static::DSN_PREFIX_LENGTH, true)) {
+            if (!preg_match('/mongodb(\+srv)?\:\/\//', $dsn)) {
                 $dsn = static::DSN_PREFIX . $dsn;
                 $this->config['dsn'] = $dsn;
             }
@@ -82,7 +78,7 @@ class MongoDb extends BaseDbService
                 $this->config['database'] = $db;
             } else {
                 //  Attempt to find db in connection string
-                $db = strstr(substr($dsn, static::DSN_PREFIX_LENGTH), '/');
+                $db = strstr(preg_replace('/mongodb(\+srv)?\:\/\//', '', $dsn), '/');
                 if (false !== $pos = strpos($db, '?')) {
                     $db = substr($db, 0, $pos);
                 }
