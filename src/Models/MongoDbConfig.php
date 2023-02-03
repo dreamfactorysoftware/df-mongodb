@@ -6,6 +6,7 @@ use DreamFactory\Core\Database\Components\SupportsExtraDbConfigs;
 use DreamFactory\Core\Exceptions\BadRequestException;
 use DreamFactory\Core\Models\BaseServiceConfigModel;
 use DreamFactory\Core\MongoDb\Services\MongoDb;
+use \Illuminate\Support\Arr;
 
 /**
  * MongoDbConfig
@@ -57,11 +58,11 @@ class MongoDbConfig extends BaseServiceConfigModel
     {
         static::checkExtensions(['mongodb']);
 
-        if (empty(array_get($data, 'database')) && empty(array_get($data, 'options.db')) &&
-            empty(array_get($data, 'options.database'))
+        if (empty(Arr::get($data, 'database')) && empty(Arr::get($data, 'options.db')) &&
+            empty(Arr::get($data, 'options.database'))
         ) {
             //  Attempt to find db in connection string
-            $dsn = strval(array_get($data, 'dsn'));
+            $dsn = strval(Arr::get($data, 'dsn'));
             $db = strstr(preg_replace('/mongodb(\+srv)?\:\/\//', '', $dsn), '/');
             if (false !== $pos = strpos($db, '?')) {
                 $db = substr($db, 0, $pos);

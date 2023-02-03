@@ -25,6 +25,7 @@ use MongoDB\Collection;
 use MongoDB\Model\BSONDocument;
 use MongoDB\Operation\FindOneAndReplace;
 use MongoDB\Operation\FindOneAndUpdate;
+use \Illuminate\Support\Arr;
 
 class Table extends BaseNoSqlDbTableResource
 {
@@ -89,7 +90,7 @@ class Table extends BaseNoSqlDbTableResource
         $record = static::validateAsArray($record, null, false, 'There are no fields in the record.');
         $coll = $this->selectTable($table);
 
-        $ssFilters = array_get($extras, 'ss_filters');
+        $ssFilters = Arr::get($extras, 'ss_filters');
 
         static::removeIds($record, static::DEFAULT_ID_FIELD);
         $fieldsInfo = $this->getFieldsInfo($table);
@@ -121,7 +122,7 @@ class Table extends BaseNoSqlDbTableResource
         $record = static::validateAsArray($record, null, false, 'There are no fields in the record.');
         $coll = $this->selectTable($table);
 
-        $ssFilters = array_get($extras, 'ss_filters');
+        $ssFilters = Arr::get($extras, 'ss_filters');
 
         static::removeIds($record, static::DEFAULT_ID_FIELD);
         $fieldsInfo = $this->getFieldsInfo($table);
@@ -162,7 +163,7 @@ class Table extends BaseNoSqlDbTableResource
         $coll = $this->selectTable($table);
         try {
             // build filter string if necessary, add server-side filters if necessary
-            $ssFilters = array_get($extras, 'ss_filters');
+            $ssFilters = Arr::get($extras, 'ss_filters');
             $criteria = $this->buildCriteriaArray([], null, $ssFilters);
             $coll->deleteMany($criteria);
 
@@ -185,7 +186,7 @@ class Table extends BaseNoSqlDbTableResource
 
         $coll = $this->selectTable($table);
 
-        $ssFilters = array_get($extras, 'ss_filters');
+        $ssFilters = Arr::get($extras, 'ss_filters');
 
         // build criteria from filter parameters
         $criteria = static::buildCriteriaArray($filter, $params, $ssFilters);
@@ -205,7 +206,7 @@ class Table extends BaseNoSqlDbTableResource
      */
     public function retrieveRecordsByFilter($table, $filter = null, $params = [], $extras = [])
     {
-        $ssFilters = array_get($extras, 'ss_filters');
+        $ssFilters = Arr::get($extras, 'ss_filters');
         $criteria = static::buildCriteriaArray($filter, $params, $ssFilters);
 
         try {
@@ -223,7 +224,7 @@ class Table extends BaseNoSqlDbTableResource
         $requested_fields = static::DEFAULT_ID_FIELD; // can only be this
         $requested_types =
             (empty($requested_types) ? [] : (!is_array($requested_types) ? [$requested_types] : $requested_types));
-        $type = array_get($requested_types, 0, 'string');
+        $type = Arr::get($requested_types, 0, 'string');
         $type = (empty($type)) ? 'string' : $type;
 
         return [new ColumnSchema(['name' => static::DEFAULT_ID_FIELD, 'type' => $type, 'required' => false])];
@@ -546,22 +547,22 @@ class Table extends BaseNoSqlDbTableResource
         }
 
         // build the server side criteria
-        $filters = array_get($ss_filters, 'filters');
+        $filters = Arr::get($ss_filters, 'filters');
         if (empty($filters)) {
             return null;
         }
 
         $criteria = [];
-        $combiner = array_get($ss_filters, 'filter_op', 'and');
+        $combiner = Arr::get($ss_filters, 'filter_op', 'and');
         foreach ($filters as $filter) {
-            $name = array_get($filter, 'name');
-            $op = array_get($filter, 'operator');
+            $name = Arr::get($filter, 'name');
+            $op = Arr::get($filter, 'operator');
             if (empty($name) || empty($op)) {
                 // log and bail
                 throw new InternalServerErrorException('Invalid server-side filter configuration detected.');
             }
 
-            $value = array_get($filter, 'value');
+            $value = Arr::get($filter, 'value');
             $value = static::interpretFilterValue($value);
 
             $criteria[] = static::buildFilterArray("$name $op $value");
@@ -767,9 +768,9 @@ class Table extends BaseNoSqlDbTableResource
     {
         if (is_array($value)) {
             if (array_key_exists('$id', $value)) {
-                $value = array_get($value, '$id');
+                $value = Arr::get($value, '$id');
             } elseif (array_key_exists('$oid', $value)) {
-                $value = array_get($value, '$oid');
+                $value = Arr::get($value, '$oid');
             }
         }
 
@@ -883,9 +884,9 @@ class Table extends BaseNoSqlDbTableResource
         $continue = false,
         $single = false
     ) {
-        $ssFilters = array_get($extras, 'ss_filters');
-        $fields = array_get($extras, ApiOptions::FIELDS);
-        $related = array_get($extras, 'related');
+        $ssFilters = Arr::get($extras, 'ss_filters');
+        $fields = Arr::get($extras, ApiOptions::FIELDS);
+        $related = Arr::get($extras, 'related');
         $requireMore = array_get_bool($extras, 'require_more') || !empty($related);
         $allowRelatedDelete = array_get_bool($extras, 'allow_related_delete');
         $relatedInfo = $this->describeTableRelated($this->transactionTable);
@@ -934,7 +935,7 @@ class Table extends BaseNoSqlDbTableResource
                 if (!empty($relatedInfo)) {
                     $this->updatePreRelations($record, $relatedInfo);
                 }
-                if (!empty($updates = array_get($extras, 'updates'))) {
+                if (!empty($updates = Arr::get($extras, 'updates'))) {
                     $parsed = $this->parseRecord($updates, $this->tableFieldsInfo, $ssFilters, true);
                     $updates = $parsed;
                 } else {
@@ -1002,7 +1003,7 @@ class Table extends BaseNoSqlDbTableResource
                 if (!empty($relatedInfo)) {
                     $this->updatePreRelations($record, $relatedInfo);
                 }
-                if (!empty($updates = array_get($extras, 'updates'))) {
+                if (!empty($updates = Arr::get($extras, 'updates'))) {
                     $parsed = $this->parseRecord($updates, $this->tableFieldsInfo, $ssFilters, true);
                     $updates = $parsed;
                 } else {
@@ -1124,9 +1125,9 @@ class Table extends BaseNoSqlDbTableResource
             return null;
         }
 
-        $updates = array_get($extras, 'updates');
-        $ssFilters = array_get($extras, 'ss_filters');
-        $requireMore = array_get($extras, 'require_more');
+        $updates = Arr::get($extras, 'updates');
+        $ssFilters = Arr::get($extras, 'ss_filters');
+        $requireMore = Arr::get($extras, 'require_more');
 
         $out = [];
         switch ($this->getAction()) {
@@ -1263,7 +1264,7 @@ class Table extends BaseNoSqlDbTableResource
     protected function findByIds($ids, $extras)
     {
         $filter = [static::DEFAULT_ID_FIELD => ['$in' => $ids]];
-        $ssFilters = array_get($extras, 'ss_filters');
+        $ssFilters = Arr::get($extras, 'ss_filters');
         $criteria = static::buildCriteriaArray($filter, null, $ssFilters);
         $result = $this->runQuery($this->collection->getCollectionName(), $criteria, $extras);
         if (empty($result)) {
@@ -1276,7 +1277,7 @@ class Table extends BaseNoSqlDbTableResource
             foreach ($this->batchIds as $index => $id) {
                 $found = false;
                 foreach ($result as $record) {
-                    if ($id == array_get($record, static::DEFAULT_ID_FIELD)) {
+                    if ($id == Arr::get($record, static::DEFAULT_ID_FIELD)) {
                         $out[$index] = $record;
                         $found = true;
                         continue;
@@ -1307,8 +1308,8 @@ class Table extends BaseNoSqlDbTableResource
             throw new NotFoundException("Table '$table' does not exist in the database.");
         }
 
-        $fields = array_get($extras, ApiOptions::FIELDS);
-        $related = array_get($extras, ApiOptions::RELATED);
+        $fields = Arr::get($extras, ApiOptions::FIELDS);
+        $related = Arr::get($extras, ApiOptions::RELATED);
         /** @type RelationSchema[] $availableRelations */
         $availableRelations = $schema->getRelations(true);
         // see if we need to add anymore fields to select for related retrieval
@@ -1322,9 +1323,9 @@ class Table extends BaseNoSqlDbTableResource
             }
         }
 
-        $limit = intval(array_get($extras, ApiOptions::LIMIT, 0));
-        $offset = intval(array_get($extras, ApiOptions::OFFSET, 0));
-        $sort = static::buildSortArray(array_get($extras, ApiOptions::ORDER));
+        $limit = intval(Arr::get($extras, ApiOptions::LIMIT, 0));
+        $offset = intval(Arr::get($extras, ApiOptions::OFFSET, 0));
+        $sort = static::buildSortArray(Arr::get($extras, ApiOptions::ORDER));
         $countOnly = array_get_bool($extras, ApiOptions::COUNT_ONLY);
         $includeCount = array_get_bool($extras, ApiOptions::INCLUDE_COUNT);
         $maxAllowed = $this->getMaxRecordsReturnedLimit();
