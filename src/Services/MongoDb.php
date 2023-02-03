@@ -9,6 +9,7 @@ use DreamFactory\Core\MongoDb\Database\Schema\Schema as DatabaseSchema;
 use DreamFactory\Core\MongoDb\Resources\Table;
 use Illuminate\Database\DatabaseManager;
 use Jenssegers\Mongodb\Connection;
+use \Illuminate\Support\Arr;
 
 /**
  * MongoDb
@@ -59,7 +60,7 @@ class MongoDb extends BaseDbService
         parent::__construct($settings);
 
         $this->config['driver'] = 'mongodb';
-        if (!empty($dsn = strval(array_get($this->config, 'dsn')))) {
+        if (!empty($dsn = strval(Arr::get($this->config, 'dsn')))) {
             // add prefix if not there
             if (!preg_match('/mongodb(\+srv)?\:\/\//', $dsn)) {
                 $dsn = static::DSN_PREFIX . $dsn;
@@ -68,13 +69,13 @@ class MongoDb extends BaseDbService
         }
 
         // laravel database config requires options to be [], not null
-        if (empty($options = array_get($this->config, 'options', []))) {
+        if (empty($options = Arr::get($this->config, 'options', []))) {
             $this->config['options'] = [];
         }
-        if (empty($db = array_get($this->config, 'database'))) {
-            if (!empty($db = array_get($this->config, 'options.db'))) {
+        if (empty($db = Arr::get($this->config, 'database'))) {
+            if (!empty($db = Arr::get($this->config, 'options.db'))) {
                 $this->config['database'] = $db;
-            } elseif (!empty($db = array_get($this->config, 'options.database'))) {
+            } elseif (!empty($db = Arr::get($this->config, 'options.database'))) {
                 $this->config['database'] = $db;
             } else {
                 //  Attempt to find db in connection string
@@ -91,16 +92,16 @@ class MongoDb extends BaseDbService
             throw new InternalServerErrorException("No MongoDb database selected in configuration.");
         }
 
-        $driverOptions = (array)array_get($this->config, 'driver_options');
-        if (null !== $context = array_get($driverOptions, 'context')) {
+        $driverOptions = (array)Arr::get($this->config, 'driver_options');
+        if (null !== $context = Arr::get($driverOptions, 'context')) {
             //  Automatically creates a stream from context
             $this->config['driver_options']['context'] = stream_context_create($context);
         }
 
-        if (empty($prefix = array_get($this->config, 'dsn'))) {
-            $host = array_get($this->config, 'host');
-            $port = array_get($this->config, 'port');
-            $username = array_get($this->config, 'username');
+        if (empty($prefix = Arr::get($this->config, 'dsn'))) {
+            $host = Arr::get($this->config, 'host');
+            $port = Arr::get($this->config, 'port');
+            $username = Arr::get($this->config, 'username');
             $prefix = $host . $port . $username . $db;
         }
         $this->setConfigBasedCachePrefix($prefix . ':');

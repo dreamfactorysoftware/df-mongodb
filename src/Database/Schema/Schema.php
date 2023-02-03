@@ -5,6 +5,7 @@ use DreamFactory\Core\Database\Schema\ColumnSchema;
 use DreamFactory\Core\Database\Schema\TableSchema;
 use Jenssegers\Mongodb\Connection;
 use MongoDB\Model\CollectionInfo;
+use \Illuminate\Support\Arr;
 
 /**
  * Schema is the class for retrieving metadata information from a MongoDB database (version 4.1.x and 5.x).
@@ -58,12 +59,12 @@ class Schema extends \DreamFactory\Core\Database\Components\Schema
      */
     public function createTable($table, $options)
     {
-        if (empty($tableName = array_get($table, 'name'))) {
+        if (empty($tableName = Arr::get($table, 'name'))) {
             throw new \Exception("No valid name exist in the received table schema.");
         }
 
         $options = [];
-        if (!empty($native = array_get($table, 'native'))) {
+        if (!empty($native = Arr::get($table, 'native'))) {
         }
 
         return $this->connection->getMongoDB()->createCollection($tableName, $options);

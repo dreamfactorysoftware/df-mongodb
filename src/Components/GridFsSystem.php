@@ -12,6 +12,7 @@ use DreamFactory\Core\Utility\FileUtilities;
 use MongoDB\Client as MongoDBClient;
 use Illuminate\Http\Request;
 use MongoDB\Driver\Exception\ConnectionTimeoutException;
+use \Illuminate\Support\Arr;
 
 class GridFsSystem extends RemoteFileSystem
 {
@@ -45,7 +46,7 @@ class GridFsSystem extends RemoteFileSystem
         $this->request = Request::capture();
         $config['driver'] = 'mongodb';
 
-        if (!empty($dsn = strval(array_get($config, 'dsn')))) {
+        if (!empty($dsn = strval(Arr::get($config, 'dsn')))) {
             // add prefix if not there
             // NOTE: We may want to change this to match the code in MondoDB.php as a regex check
             // if this breaks for calling Atlas / replica sets with the +srv option
@@ -56,13 +57,13 @@ class GridFsSystem extends RemoteFileSystem
         }
 
         // laravel database config requires options to be [], not null
-        if (empty($options = array_get($config, 'options', []))) {
+        if (empty($options = Arr::get($config, 'options', []))) {
             $config['options'] = [];
         }
-        if (empty($db = array_get($config, 'database'))) {
-            if (!empty($db = array_get($config, 'options.db'))) {
+        if (empty($db = Arr::get($config, 'database'))) {
+            if (!empty($db = Arr::get($config, 'options.db'))) {
                 $config['database'] = $db;
-            } elseif (!empty($db = array_get($config, 'options.database'))) {
+            } elseif (!empty($db = Arr::get($config, 'options.database'))) {
                 $config['database'] = $db;
             } else {
                 //  Attempt to find db in connection string
@@ -81,18 +82,18 @@ class GridFsSystem extends RemoteFileSystem
             throw new InternalServerErrorException("No MongoDb database selected in configuration.");
         }
 
-        $driverOptions = (array)array_get($config, 'driver_options');
-        if (null !== $context = array_get($driverOptions, 'context')) {
+        $driverOptions = (array)Arr::get($config, 'driver_options');
+        if (null !== $context = Arr::get($driverOptions, 'context')) {
             //  Automatically creates a stream from context
             $config['driver_options']['context'] = stream_context_create($context);
         }
 
-        if (empty($prefix = array_get($config, 'dsn'))) {
+        if (empty($prefix = Arr::get($config, 'dsn'))) {
             $connectionOptions = [];
-            $host = array_get($config, 'host');
-            $port = array_get($config, 'port');
-            $username = array_get($config, 'username');
-            $password = array_get($config, 'password');
+            $host = Arr::get($config, 'host');
+            $port = Arr::get($config, 'port');
+            $username = Arr::get($config, 'username');
+            $password = Arr::get($config, 'password');
             $connectionStr = sprintf("mongodb://%s:%s", $host,
                 $port, $db);
 
@@ -111,7 +112,7 @@ class GridFsSystem extends RemoteFileSystem
             $this->blobConn = $this->createConnection($dsn);
         }
 
-        $bucketName = array_get($config, 'bucket_name');
+        $bucketName = Arr::get($config, 'bucket_name');
 
         if (!empty($bucketName)) {
             $this->gridFS = $this->blobConn->$db->selectGridFSBucket(['bucketName' => $bucketName]);
@@ -222,7 +223,7 @@ class GridFsSystem extends RemoteFileSystem
         $return = [
             'oid'            => (string)$obj->_id,
             'name'           => $obj->filename,
-            'content_type'   => (isset($obj->contentType)) ? $obj->contentType : '',
+            'content_type'   => $obj->contentType ?? '',
             'content_length' => $obj->length,
             'last_modified'  => $date->format(\DateTime::ATOM),
             'path'           => $obj->filename,
@@ -360,75 +361,15 @@ class GridFsSystem extends RemoteFileSystem
         return $this->getBlobMeta($obj);
     }
 
-    /**
-     *
-     * @param string $container
-     * @param string $name
-     * @param array  $params
-     *
-     * @throws \DreamFactory\Core\Exceptions\DfException
-     */
-    public function streamBlob($container, $name, $params = [])
+    protected function getBlobInChunks($container, $name, $chunkSize): \Generator
     {
         try {
             $fileObj = $this->gridFindOne($name);
-            $range = (isset($params['range'])) ? $params['range'] : null;
-            $start = $end = -1;
             $stream = $this->gridFS->openDownloadStream($fileObj->_id);
-            $date = $fileObj->uploadDate->toDateTime();
-            $size = $fullsize = intval($fileObj->length);
-
-            header('Last-Modified: ' . $date->format(\DateTime::ATOM));
-
-            /** If content type is not set, try to determine it. */
-            if (!isset($fileObj->contentType)) {
-                $ext = FileUtilities::getFileExtension($name);
-                $contentType = FileUtilities::determineContentType($ext);
-                header('Content-Type: ' . $contentType);
-            } else {
-                header('Content-Type: ' . $fileObj->contentType);
-            }
-
-            $disposition =
-                (isset($params['disposition']) && !empty($params['disposition'])) ? $params['disposition']
-                    : 'inline';
-
-            header('Content-Disposition: ' . $disposition . '; filename="' . $name . '";');
-
-            // All this for range header being passed.
-            if ($range != null) {
-                $eqPos = strpos($range, "=");
-                $toPos = strpos($range, "-");
-                $unit = substr($range, 0, $eqPos);
-                $start = intval(substr($range, $eqPos + 1, $toPos));
-                $end = intval(substr($range, $toPos + 1));
-                $success = fseek($stream, $start);
-                if ($success == 0) {
-                    $size = $end - $start;
-                    // Don't let the passed size exceed the actual.
-                    if ($fullsize <= $size) {
-                        $size = $fullsize;
-                    }
-                    $response_code = 206;
-                    header('Accept-Ranges: ' . $unit);
-                    header('Content-Range: ' . $unit . " " . $start . "-" . ($fullsize - 1) . "/" . $fullsize, true,
-                        $response_code);
-                }
-            }
-
-            header('Content-Length:' . $size);
 
             while (!feof($stream)) {
-                if ($start = -1 && $end = -1) {
-                    /** if entire file is requested... */
-                    echo stream_get_contents($stream, \Config::get('df.file_chunk_size'));
-                } else {
-                    /** if Bit of file, in chunks */
-                    echo stream_get_contents($stream, $end, $start);
-                }
+                yield stream_get_contents($stream, $chunkSize);
             }
-        } catch (ConnectionTimeoutException $ex) {
-            throw new ConnectionTimeoutException($ex->getMessage());
         } catch (\Exception $ex) {
             throw new DfException('Failed to retrieve GridFS file "' . $name . '": ' . $ex->getMessage());
         }
