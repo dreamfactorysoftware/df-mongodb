@@ -437,13 +437,13 @@ class Table extends BaseNoSqlDbTableResource
                             }
                         }
 
-                        return [$field => new Regex($value, '')];
+                        return [$field => new Regex($value, 'i')];
                     } elseif (DbComparisonOperators::CONTAINS === $sqlOp) {
-                        return [$field => new Regex($value, '')];
+                        return [$field => new Regex($value, 'i')];
                     } elseif (DbComparisonOperators::STARTS_WITH === $sqlOp) {
-                        return [$field => new Regex('^' . $value, '')];
+                        return [$field => new Regex('^' . $value, 'i')];
                     } elseif (DbComparisonOperators::ENDS_WITH === $sqlOp) {
-                        return [$field => new Regex($value . '$', '')];
+                        return [$field => new Regex($value . '$', 'i')];
                     }
                 }
 
