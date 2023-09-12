@@ -11,6 +11,7 @@ use DreamFactory\Core\Exceptions\BatchException;
 use DreamFactory\Core\Exceptions\InternalServerErrorException;
 use DreamFactory\Core\Exceptions\NotFoundException;
 use DreamFactory\Core\Exceptions\RestException;
+use DreamFactory\Core\MongoDb\Enums\BinaryDataTypes;
 use DreamFactory\Core\MongoDb\Services\MongoDb;
 use DreamFactory\Core\Database\Resources\BaseNoSqlDbTableResource;
 use DreamFactory\Core\Utility\DataFormatter;
@@ -679,10 +680,8 @@ class Table extends BaseNoSqlDbTableResource
                         }
                         $data = $data->toDateTime();
                         $data = ['$date' => $data->format($cfgFormat)];
-                    } elseif ($data instanceof Binary) {
-                        if ($data->getType() == 0) {
-                            $data = $data->getData();
-                        }
+                    } elseif ($data instanceof Binary && $data->getType() === BinaryDataTypes::GENERIC) {
+                        $data = $data->getData();
                     }
                 }
             }
