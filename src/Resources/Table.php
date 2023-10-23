@@ -703,7 +703,7 @@ class Table extends BaseNoSqlDbTableResource
                     if (is_string($data) && (static::DEFAULT_ID_FIELD == $key)) {
                         $record[$key] = static::idToMongoId($data);
                     } elseif (is_array($data)) {
-                        if (1 === count($data)) {
+//                        if (1 === count($data)) {
                             // using typed definition, i.e. {"$date" : "2014-08-02T08:40:12.569Z" }
                             if (array_key_exists('$date', $data)) {
                                 $temp = $data['$date'];
@@ -722,7 +722,7 @@ class Table extends BaseNoSqlDbTableResource
                             } else {
                                 $record[$key] = static::toMongoObjects($data);
                             }
-                        }
+//                        }
                     }
                 }
             }
