@@ -1,0 +1,52 @@
+repo_name: dreamfactorysoftware/df-mongodb
+report_id: 1c9f456ae88e9f4ca07d1797edf9f41e
+repo_type: Public
+timestamp: '2023-12-06T22:37:49+00:00'
+requested_by: anas-srikou
+provider: github
+branch: master
+detected_tools_count: 4
+tools:
+- name: PHP
+  description: A popular general-purpose scripting language that is especially suited
+    to web development
+  website_url: http://www.php.net/
+  open_source: true
+  hosted_saas: false
+  category: Languages & Frameworks
+  sub_category: Languages
+  image_url: https://img.stackshare.io/service/991/hwUcGZ41_400x400.jpg
+  detection_source: Repo Metadata
+- name: MongoDB
+  description: The database for giant ideas
+  website_url: http://www.mongodb.com/
+  open_source: true
+  hosted_saas: false
+  category: Data Stores
+  sub_category: Databases
+  image_url: https://img.stackshare.io/service/1030/leaf-360x360.png
+  detection_source: ".dreamfactory.php"
+  last_updated_by: Lee Hicks
+  last_updated_on: 2015-06-16 18:12:50.000000000 Z
+- name: Git
+  description: Fast, scalable, distributed revision control system
+  website_url: http://git-scm.com/
+  open_source: true
+  hosted_saas: false
+  category: Build, Test, Deploy
+  sub_category: Version Control System
+  image_url: https://img.stackshare.io/service/1046/git.png
+  detection_source: Repo Metadata
+- name: jenssegers/mongodb
+  description: A MongoDB based Eloquent model and Query builder for Laravel
+  package_url: https://packagist.org/jenssegers/mongodb
+  version: 3.9.2
+  open_source: false
+  hosted_saas: false
+  category: Build, Test, Deploy
+  sub_category: Package Managers
+  image_url: https://img.stackshare.io/package/packagist/image.png
+  detection_source_url: github.com/dreamfactorysoftware/df-mongodb/blob/master/composer.json
+  detection_source: composer.json
+  last_updated_by: Danil Lytvyn
+  last_updated_on: 2023-02-03 15:14:46.000000000 Z
