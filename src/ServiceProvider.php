@@ -12,17 +12,17 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
     public function register()
     {
         // Ensure MongoDB package is loaded
-        if (!class_exists('Jenssegers\Mongodb\MongodbServiceProvider')) {
+        if (!class_exists('Jenssegers\Mongodb\MongoDBServiceProvider')) {
             // Try to load it from vendor
-            $providerPath = base_path('vendor/jenssegers/mongodb/src/MongodbServiceProvider.php');
+            $providerPath = base_path('vendor/jenssegers/mongodb/src/MongoDBServiceProvider.php');
             if (file_exists($providerPath)) {
                 require_once $providerPath;
             }
         }
 
         // Register the MongoDB service provider
-        if (class_exists('Jenssegers\Mongodb\MongodbServiceProvider')) {
-            $this->app->register(\Jenssegers\Mongodb\MongodbServiceProvider::class);
+        if (class_exists('Jenssegers\Mongodb\MongoDBServiceProvider')) {
+            $this->app->register(\Jenssegers\Mongodb\MongoDBServiceProvider::class);
         }
 
         // Add our service types.
