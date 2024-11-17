@@ -11,8 +11,19 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
 {
     public function register()
     {
-        // Register the MongoDB service provider first
-        $this->app->register(\Jenssegers\Mongodb\MongodbServiceProvider::class);
+        // Ensure MongoDB package is loaded
+        if (!class_exists('Jenssegers\Mongodb\MongodbServiceProvider')) {
+            // Try to load it from vendor
+            $providerPath = base_path('vendor/jenssegers/mongodb/src/MongodbServiceProvider.php');
+            if (file_exists($providerPath)) {
+                require_once $providerPath;
+            }
+        }
+
+        // Register the MongoDB service provider
+        if (class_exists('Jenssegers\Mongodb\MongodbServiceProvider')) {
+            $this->app->register(\Jenssegers\Mongodb\MongodbServiceProvider::class);
+        }
 
         // Add our service types.
         $this->app->resolving('df.service', function (ServiceManager $df) {
