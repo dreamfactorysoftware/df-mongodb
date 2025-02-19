@@ -2,46 +2,40 @@
 namespace DreamFactory\Core\MongoDb;
 
 use DreamFactory\Core\Enums\ServiceTypeGroups;
-use DreamFactory\Core\Enums\LicenseLevel;
 use DreamFactory\Core\MongoDb\Models\MongoDbConfig;
-use DreamFactory\Core\MongoDb\Models\GridFsConfig;
-use DreamFactory\Core\MongoDb\Services\GridFsService;
 use DreamFactory\Core\MongoDb\Services\MongoDb;
 use DreamFactory\Core\Services\ServiceManager;
 use DreamFactory\Core\Services\ServiceType;
-use Jenssegers\Mongodb\MongodbServiceProvider;
 
-class ServiceProvider extends MongodbServiceProvider
+class ServiceProvider extends \Illuminate\Support\ServiceProvider
 {
     public function register()
     {
-        parent::register();
+        // Ensure MongoDB package is loaded
+        if (!class_exists('MongoDB\Laravel\MongoDBServiceProvider')) {
+            // Try to load it from vendor
+            $providerPath = base_path('vendor/jenssegers/mongodb/src/MongoDBServiceProvider.php');
+            if (file_exists($providerPath)) {
+                require_once $providerPath;
+            }
+        }
+
+        // Register the MongoDB service provider
+        if (class_exists('MongoDB\Laravel\MongoDBServiceProvider')) {
+            $this->app->register(\MongoDB\Laravel\MongoDBServiceProvider::class);
+        }
 
         // Add our service types.
         $this->app->resolving('df.service', function (ServiceManager $df) {
             $df->addType(
                 new ServiceType([
-                    'name'                  => 'mongodb',
-                    'label'                 => 'MongoDB',
-                    'description'           => 'Database service for MongoDB connections.',
-                    'group'                 => ServiceTypeGroups::DATABASE,
-                    'subscription_required' => LicenseLevel::SILVER,
-                    'config_handler'        => MongoDbConfig::class,
-                    'factory'               => function ($config) {
+                    'name'            => 'mongodb',
+                    'label'           => 'MongoDB',
+                    'description'     => 'Database service supporting MongoDB connections.',
+                    'group'           => ServiceTypeGroups::DATABASE,
+                    'config_handler'  => MongoDbConfig::class,
+                    'factory'         => function ($config) {
                         return new MongoDb($config);
-                    },
-                ])
-            );
-            $df->addType(
-                new ServiceType([
-                    'name'                  => 'gridfs',
-                    'label'                 => 'GridFS',
-                    'description'           => 'GridFS File Storage services.',
-                    'group'                 => ServiceTypeGroups::FILE,
-                    'subscription_required' => LicenseLevel::SILVER,
-                    'config_handler'        => GridFsConfig::class,
-                    'factory'               => function ($config) {
-                        return new GridFsService($config);
                     },
                 ])
             );
@@ -50,8 +44,6 @@ class ServiceProvider extends MongodbServiceProvider
 
     public function boot()
     {
-        parent::boot();
-
         // add migrations
         $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
     }
