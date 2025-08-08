@@ -464,7 +464,7 @@ class Table extends BaseNoSqlDbTableResource
      * @param string $field
      * @param array  $replacements
      *
-     * @return bool|float|int|string|ObjectID
+     * @return bool|float|int|string|ObjectID|Binary
      */
     private static function determineValue($value, $field = null, $replacements = null)
     {
@@ -475,8 +475,48 @@ class Table extends BaseNoSqlDbTableResource
             }
         }
 
-        if ($field && (static::DEFAULT_ID_FIELD == $field)) {
-            $value = static::idToMongoId($value);
+        // Handle binary data for ID fields with strict validation
+        if ($field && (strpos($field, static::DEFAULT_ID_FIELD) === 0)) {
+            // More precise field validation - only handle known ID field patterns
+            $validIdFields = [
+                static::DEFAULT_ID_FIELD,           // '_id'
+                static::DEFAULT_ID_FIELD . '.Id',    // '_id.Id'  
+                static::DEFAULT_ID_FIELD . '.$id'    // '_id.$id'
+            ];
+            
+            // Only process if it's a valid ID field
+            if (in_array($field, $validIdFields)) {
+                // Check if the value is a string that could be binary data
+                if (is_string($value)) {
+                    // Strip quotes for testing
+                    $testValue = trim($value, "'\"");
+                    
+                    // Check if it looks like base64 binary data
+                    // MongoDB ObjectIDs are 24 hex chars, but base64 can also be 24 chars
+                    // Distinguish by checking for base64-specific characters (/, +, =)
+                    $mongodbObjectIdLength = 24;
+                    $minBinaryIdLength = 16; // Minimum for UUIDs
+                    
+                    $isHexObjectId = (strlen($testValue) === $mongodbObjectIdLength && preg_match('/^[0-9a-f]+$/i', $testValue));
+                    $looksLikeBase64 = (strlen($testValue) >= $minBinaryIdLength && 
+                                        preg_match('/^[A-Za-z0-9+\/]+={0,2}$/', $testValue));
+                    
+                    if (!$isHexObjectId && $looksLikeBase64) {
+                        // Looks like base64, try to decode it
+                        $decoded = base64_decode($testValue, true);
+                        // Validate the decoded binary has reasonable length (at least 12 bytes)
+                        if ($decoded !== false && strlen($decoded) >= 12) {
+                            // Successfully decoded with valid length - return as Binary
+                            return new Binary($decoded, BinaryDataTypes::UUID_OLD);
+                        }
+                    }
+                }
+                
+                // Not binary data, handle normal ID conversion for direct _id field
+                if ($field === static::DEFAULT_ID_FIELD) {
+                    return static::idToMongoId($value);
+                }
+            }
         }
 
         if (is_string($value)) {
@@ -680,8 +720,14 @@ class Table extends BaseNoSqlDbTableResource
                         }
                         $data = $data->toDateTime();
                         $data = ['$date' => $data->format($cfgFormat)];
-                    } elseif ($data instanceof Binary && $data->getType() === BinaryDataTypes::GENERIC) {
-                        $data = $data->getData();
+                    } elseif ($data instanceof Binary) {
+                        // Return binary data in extended JSON format for all binary types
+                        $data = [
+                            '$binary' => [
+                                'base64' => base64_encode($data->getData()),
+                                'subType' => sprintf('%02x', $data->getType())
+                            ]
+                        ];
                     }
                 }
             }
@@ -714,6 +760,20 @@ class Table extends BaseNoSqlDbTableResource
                                     $record[$key] = new UTCDateTime(strtotime($temp) * 1000);
                                 } elseif (is_int($temp)) {
                                     $record[$key] = new UTCDateTime($temp * 1000);
+                                }
+                            } elseif (isset($data['$binary'])) {
+                                // Handle MongoDB Binary data type
+                                $binaryData = $data['$binary'];
+                                if (is_array($binaryData)) {
+                                    // Handle extended JSON format: {"$binary": {"base64": "...", "subType": "03"}}
+                                    $base64 = Arr::get($binaryData, 'base64', '');
+                                    $subType = Arr::get($binaryData, 'subType', '00');
+                                    // Convert hex subType to integer
+                                    $subTypeInt = hexdec($subType);
+                                    $record[$key] = new Binary(base64_decode($base64), $subTypeInt);
+                                } elseif (is_string($binaryData)) {
+                                    // Handle simple base64 string
+                                    $record[$key] = new Binary(base64_decode($binaryData), BinaryDataTypes::GENERIC);
                                 }
                             } elseif (isset($data['$id'])) {
                                 $record[$key] = static::idToMongoId($data['$id']);
