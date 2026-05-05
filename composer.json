@@ -33,7 +33,7 @@
   "require":     {
     "dreamfactory/df-database": "~1.0",
     "dreamfactory/df-file":     "~0.8",
-    "jenssegers/mongodb":       "^4.2.0"
+    "mongodb/laravel-mongodb":  "^4.0"
   },
   "autoload":    {
     "psr-4": {

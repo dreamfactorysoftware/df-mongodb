@@ -14,7 +14,7 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
         // Ensure MongoDB package is loaded
         if (!class_exists('MongoDB\Laravel\MongoDBServiceProvider')) {
             // Try to load it from vendor
-            $providerPath = base_path('vendor/jenssegers/mongodb/src/MongoDBServiceProvider.php');
+            $providerPath = base_path('vendor/mongodb/laravel-mongodb/src/MongoDBServiceProvider.php');
             if (file_exists($providerPath)) {
                 require_once $providerPath;
             }

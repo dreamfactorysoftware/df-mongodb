@@ -8,7 +8,7 @@ use DreamFactory\Core\Exceptions\InternalServerErrorException;
 use DreamFactory\Core\MongoDb\Database\Schema\Schema as DatabaseSchema;
 use DreamFactory\Core\MongoDb\Resources\Table;
 use Illuminate\Database\DatabaseManager;
-use Jenssegers\Mongodb\Connection;
+use MongoDB\Laravel\Connection;
 use \Illuminate\Support\Arr;
 
 /**

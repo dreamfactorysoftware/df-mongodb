@@ -3,7 +3,7 @@ namespace DreamFactory\Core\MongoDb\Database\Schema;
 
 use DreamFactory\Core\Database\Schema\ColumnSchema;
 use DreamFactory\Core\Database\Schema\TableSchema;
-use Jenssegers\Mongodb\Connection;
+use MongoDB\Laravel\Connection;
 use MongoDB\Model\CollectionInfo;
 use \Illuminate\Support\Arr;
 
