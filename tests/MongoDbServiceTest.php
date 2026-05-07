@@ -28,9 +28,9 @@ class MongoDbTest extends \DreamFactory\Core\Database\Testing\DbServiceTestCase
      */
     protected $service = null;
 
-    public function setup()
+    public function setUp(): void
     {
-        parent::setup();
+        parent::setUp();
 
         $options = [];
         $this->service = new MongoDb(
@@ -52,7 +52,7 @@ class MongoDbTest extends \DreamFactory\Core\Database\Testing\DbServiceTestCase
         );
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         parent::tearDown();
     }
