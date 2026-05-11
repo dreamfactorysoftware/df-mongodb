@@ -30,6 +30,45 @@ use \Illuminate\Support\Arr;
 
 class Table extends BaseNoSqlDbTableResource
 {
+    /**
+     * MongoDB operators that allow server-side JavaScript execution or
+     * are otherwise unsafe in caller-supplied filters. These must never
+     * appear in a filter constructed from request input.
+     */
+    private const FORBIDDEN_FILTER_OPERATORS = [
+        '$where',        // arbitrary JS query expression
+        '$function',     // (4.4+) inline JS aggregation function
+        '$accumulator',  // (4.4+) custom JS accumulator
+        '$expr',         // can be a foothold for $function inside aggregation
+        'mapReduce',     // legacy JS map-reduce
+    ];
+
+    /**
+     * Reject MongoDB filters that contain JavaScript-execution or other
+     * unsafe operators. Recurses into nested arrays so a payload like
+     * {"$or": [{"$where": "..."}, ...]} is also caught.
+     *
+     * @throws BadRequestException
+     */
+    public static function assertSafeMongoFilter(array $filter): void
+    {
+        foreach ($filter as $key => $value) {
+            if (is_string($key)) {
+                $needle = strtolower($key);
+                foreach (self::FORBIDDEN_FILTER_OPERATORS as $op) {
+                    if (strtolower($op) === $needle) {
+                        throw new BadRequestException(
+                            "MongoDB filter contains forbidden operator: {$key}"
+                        );
+                    }
+                }
+            }
+            if (is_array($value)) {
+                self::assertSafeMongoFilter($value);
+            }
+        }
+    }
+
     //*************************************************************************
     //	Constants
     //*************************************************************************
@@ -335,7 +374,12 @@ class Table extends BaseNoSqlDbTableResource
         }
 
         if (is_array($filter)) {
-            // assume client knows correct usage of Mongo query language
+            // Reject filter operators that allow JavaScript execution or
+            // operate as server-side scripts. Without this, a caller could
+            // post a filter like {"$where": "this.password.match(...)"} and
+            // exfiltrate field contents via timing oracle, or use $function
+            // / $accumulator to run arbitrary JS in the MongoDB process.
+            self::assertSafeMongoFilter($filter);
             return static::toMongoObjects($filter);
         }
 
